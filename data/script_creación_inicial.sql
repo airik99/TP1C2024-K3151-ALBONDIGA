@@ -606,7 +606,264 @@ CREATE PROCEDURE ALBONDIGA.migrar_Estado_Envio
   END
 GO
 
+CREATE PROCEDURE ALBONDIGA.migrar_Provincia
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las provincias...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Tipo_Medio_Pago
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los tipos de medio de pago...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Tipo_Comprobante
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los tipos de comprobante...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Promocion
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las promociones...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Regla
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las reglas...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Categoria
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las categorias...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Sub_Categoria
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las subcategorias...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Tipo_Caja
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los tipos de caja...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Localidad
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las localidades...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Producto
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los productos...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Medio_Pago
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los medios de pago...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Descuento_Por_Medio_Pago
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los descuentos por medio de pago...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Domicilio
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los domicilios...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Cliente
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los clientes...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Supermercado
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los supermercados...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Tarjeta
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las tarjetas...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Sucursal
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las sucursales...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Empleado
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los empleados...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Caja
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las cajas...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Detalle_Pago
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los detalles de pago...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Ticket
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los tickets...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Envio
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los envios...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Pago
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los pagos...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Promocion_x_Ticket
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las promociones por ticket...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Promocion_x_Producto
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las promociones por producto...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Reglas_x_Promocion
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las reglas por promocion...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Producto_x_Ticket
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar los productos por ticket...'
+    /* comportamiento del procedure */
+END
+GO
+
+CREATE PROCEDURE ALBONDIGA.migrar_Categoria_x_Subcategoria
+AS
+BEGIN
+    PRINT 'Se comienzan a migrar las categorias por subcategoria...'
+    /* comportamiento del procedure */
+END
+GO
+
+
 --------------------------- Ejecutar stores procedures ---------------------------
-/*PRUEBA: FUNCIONA!!! descomentar lo de abajo para probar*/
---EXEC ALBONDIGA.migrar_Estado_Envio;
---select * from ALBONDIGA.Estado_Envio
+/*PRUEBA: FUNCIONA!!!*/
+EXEC ALBONDIGA.migrar_Estado_Envio;
+
+select * from ALBONDIGA.Estado_Envio
+
+/*
+EXEC ALBONDIGA.migrar_Provincia;
+EXEC ALBONDIGA.migrar_Tipo_Medio_Pago;
+EXEC ALBONDIGA.migrar_Tipo_Comprobante;
+EXEC ALBONDIGA.migrar_Promocion;
+EXEC ALBONDIGA.migrar_Regla;
+EXEC ALBONDIGA.migrar_Categoria;
+EXEC ALBONDIGA.migrar_Sub_Categoria;
+EXEC ALBONDIGA.migrar_Tipo_Caja;
+EXEC ALBONDIGA.migrar_Localidad;
+EXEC ALBONDIGA.migrar_Producto;
+EXEC ALBONDIGA.migrar_Medio_Pago;
+EXEC ALBONDIGA.migrar_Descuento_Por_Medio_Pago;
+EXEC ALBONDIGA.migrar_Domicilio;
+EXEC ALBONDIGA.migrar_Cliente;
+EXEC ALBONDIGA.migrar_Supermercado;
+EXEC ALBONDIGA.migrar_Tarjeta;
+EXEC ALBONDIGA.migrar_Sucursal;
+EXEC ALBONDIGA.migrar_Empleado;
+EXEC ALBONDIGA.migrar_Caja;
+EXEC ALBONDIGA.migrar_Detalle_Pago;
+EXEC ALBONDIGA.migrar_Ticket;
+EXEC ALBONDIGA.migrar_Envio;
+EXEC ALBONDIGA.migrar_Pago;
+EXEC ALBONDIGA.migrar_Promocion_x_Ticket;
+EXEC ALBONDIGA.migrar_Promocion_x_Producto;
+EXEC ALBONDIGA.migrar_Reglas_x_Promocion;
+EXEC ALBONDIGA.migrar_Producto_x_Ticket;
+EXEC ALBONDIGA.migrar_Categoria_x_Subcategoria;
+*/
