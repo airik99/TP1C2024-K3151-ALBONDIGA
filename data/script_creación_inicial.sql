@@ -254,7 +254,7 @@ CREATE TABLE ALBONDIGA.Promocion (
 
 CREATE TABLE ALBONDIGA.Regla (
     id_regla INT IDENTITY(1,1) PRIMARY KEY,
-    aplica_misma_regla DECIMAL(18,0) NOT NULL,
+	aplica_misma_marca DECIMAL(18,0) NOT NULL,
     aplica_misma_prod DECIMAL(18,0) NOT NULL,
     cant_aplicable_descuento DECIMAL(18,0) NOT NULL,
     cant_aplicable_regla DECIMAL(18,0) NOT NULL,
@@ -285,7 +285,7 @@ CREATE TABLE ALBONDIGA.Localidad (
 );
 
 CREATE TABLE ALBONDIGA.Producto (
-    codigo INT PRIMARY KEY NOT NULL,
+    codigo INT IDENTITY(1,1) PRIMARY KEY, --INT PRIMARY KEY NOT NULL, NO FIGURA NINGUN CODIGO DE PRODUCTO QUE PODAMOS USAR COMO PK
     nombre NVARCHAR(255) NOT NULL,
     precio_unitario DECIMAL(18,2) NOT NULL,
     marca NVARCHAR(255) NOT NULL,
@@ -600,9 +600,7 @@ CREATE PROCEDURE ALBONDIGA.migrar_Estado_Envio
   BEGIN
 	PRINT 'Se comienzan a migrar los estados de envio...'
     INSERT INTO Estado_Envio(descripcion)
-		SELECT DISTINCT Maestra.ENVIO_ESTADO AS descripcion
-		FROM gd_esquema.Maestra
-		WHERE ENVIO_ESTADO IS NOT NULL
+		SELECT DISTINCT Maestra.ENVIO_ESTADO AS descripcion FROM gd_esquema.Maestra WHERE ENVIO_ESTADO IS NOT NULL
   END
 GO
 
@@ -610,7 +608,10 @@ CREATE PROCEDURE ALBONDIGA.migrar_Provincia
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las provincias...'
-    /* comportamiento del procedure */
+    INSERT INTO Provincia(nombre)
+		SELECT DISTINCT CLIENTE_PROVINCIA AS nombre FROM gd_esquema.Maestra WHERE CLIENTE_PROVINCIA IS NOT NULL
+		SELECT DISTINCT SUCURSAL_PROVINCIA AS nombre FROM gd_esquema.Maestra WHERE SUCURSAL_PROVINCIA IS NOT NULL
+        SELECT DISTINCT SUPER_PROVINCIA AS nombre FROM gd_esquema.Maestra WHERE SUPER_PROVINCIA IS NOT NULL
 END
 GO
 
@@ -618,7 +619,8 @@ CREATE PROCEDURE ALBONDIGA.migrar_Tipo_Medio_Pago
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los tipos de medio de pago...'
-    /* comportamiento del procedure */
+    INSERT INTO Tipo_Medio_Pago(tipo_pago)
+		SELECT DISTINCT PAGO_TIPO_MEDIO_PAGO AS tipo_pago FROM gd_esquema.Maestra WHERE PAGO_TIPO_MEDIO_PAGO IS NOT NULL
 END
 GO
 
@@ -626,7 +628,8 @@ CREATE PROCEDURE ALBONDIGA.migrar_Tipo_Comprobante
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los tipos de comprobante...'
-    /* comportamiento del procedure */
+    INSERT INTO Tipo_Comprobante(tipo)
+		SELECT DISTINCT TICKET_TIPO_COMPROBANTE AS tipo from gd_esquema.Maestra WHERE TICKET_TIPO_COMPROBANTE IS NOT NULL
 END
 GO
 
@@ -634,7 +637,15 @@ CREATE PROCEDURE ALBONDIGA.migrar_Promocion
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las promociones...'
-    /* comportamiento del procedure */
+   /* INSERT INTO Promocion(id_promocion, descuento_aplicado, descripcion, fecha_inicio, fecha_fin)
+		SELECT DISTINCT PROMO_CODIGO AS id_promocion, 
+						PROMO_APLICADA_DESCUENTO AS descuento_aplicado,
+						PROMOCION_DESCRIPCION AS descripcion,
+						PROMOCION_FECHA_INICIO AS fecha_inicio,
+						PROMOCION_FECHA_INICIO AS fecha_fin
+		from gd_esquema.Maestra WHERE PROMO_CODIGO IS NOT NULL */
+
+		-- ESTO HAY QUE REPENSARLO PORQUE TIENE CODIGOS DUPLICADOS, NO PUEDE SER PK
 END
 GO
 
@@ -642,7 +653,17 @@ CREATE PROCEDURE ALBONDIGA.migrar_Regla
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las reglas...'
-    /* comportamiento del procedure */
+    INSERT INTO Regla(aplica_misma_marca, aplica_misma_prod, cant_aplicable_descuento, cant_aplicable_regla, cant_maxima_producto, descripcion, descuento_aplicar_porcentaje)
+		SELECT DISTINCT REGLA_APLICA_MISMA_MARCA AS aplica_misma_marca,
+						REGLA_APLICA_MISMO_PROD AS aplica_misma_prod,
+						REGLA_CANT_APLICA_DESCUENTO AS cant_aplicable_descuento,
+						REGLA_CANT_APLICABLE_REGLA AS cant_aplicable_regla,
+						REGLA_CANT_MAX_PROD AS cant_maxima_producto,
+						REGLA_DESCRIPCION AS descripcion,
+						REGLA_DESCUENTO_APLICABLE_PROD AS descuento_aplicar_porcentaje
+		FROM gd_esquema.Maestra 
+		WHERE REGLA_APLICA_MISMA_MARCA IS NOT NULL AND REGLA_APLICA_MISMO_PROD IS NOT NULL AND REGLA_CANT_APLICA_DESCUENTO IS NOT NULL
+		AND REGLA_CANT_MAX_PROD IS NOT NULL AND REGLA_DESCRIPCION IS NOT NULL AND REGLA_DESCUENTO_APLICABLE_PROD IS NOT NULL
 END
 GO
 
@@ -650,7 +671,8 @@ CREATE PROCEDURE ALBONDIGA.migrar_Categoria
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las categorias...'
-    /* comportamiento del procedure */
+    INSERT INTO Categoria(nombre)
+		SELECT DISTINCT PRODUCTO_CATEGORIA AS nombre FROM gd_esquema.Maestra WHERE PRODUCTO_CATEGORIA IS NOT NULL
 END
 GO
 
@@ -658,7 +680,8 @@ CREATE PROCEDURE ALBONDIGA.migrar_Sub_Categoria
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las subcategorias...'
-    /* comportamiento del procedure */
+    INSERT INTO Sub_Categoria(nombre)
+		SELECT DISTINCT PRODUCTO_SUB_CATEGORIA AS nombre FROM gd_esquema.Maestra WHERE PRODUCTO_SUB_CATEGORIA IS NOT NULL
 END
 GO
 
@@ -666,7 +689,8 @@ CREATE PROCEDURE ALBONDIGA.migrar_Tipo_Caja
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los tipos de caja...'
-    /* comportamiento del procedure */
+    INSERT INTO Tipo_Caja(tipo_caja)
+		SELECT DISTINCT CAJA_TIPO AS tipo FROM gd_esquema.Maestra WHERE CAJA_TIPO IS NOT NULL
 END
 GO
 
@@ -674,7 +698,18 @@ CREATE PROCEDURE ALBONDIGA.migrar_Localidad
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las localidades...'
-    /* comportamiento del procedure */
+    INSERT INTO Localidad(nombre, id_provincia)
+		SELECT DISTINCT CLIENTE_LOCALIDAD AS nombre, P.id_provincia FROM gd_esquema.Maestra
+		INNER JOIN Provincia P ON P.nombre = CLIENTE_PROVINCIA 
+		WHERE CLIENTE_LOCALIDAD IS NOT NULL
+		UNION
+		SELECT DISTINCT SUCURSAL_LOCALIDAD AS nombre, P.id_provincia FROM gd_esquema.Maestra
+		INNER JOIN Provincia P ON P.nombre = SUCURSAL_PROVINCIA
+		WHERE SUCURSAL_LOCALIDAD IS NOT NULL
+		UNION
+		SELECT DISTINCT SUPER_LOCALIDAD AS nombre, P.id_provincia FROM gd_esquema.Maestra
+		INNER JOIN Provincia P ON P.nombre = SUPER_PROVINCIA
+		WHERE SUPER_LOCALIDAD IS NOT NULL
 END
 GO
 
@@ -682,7 +717,15 @@ CREATE PROCEDURE ALBONDIGA.migrar_Producto
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los productos...'
-    /* comportamiento del procedure */
+    INSERT INTO Producto(nombre, precio_unitario, marca, descripcion, id_subcategoria)
+		SELECT DISTINCT PRODUCTO_NOMBRE AS nombre, -- REVISAR ESTO DESPUES, EN LA MAESTRA NO HAY NINGUN CODIGO, SOLO ESTÁ EL NOMBRE
+						PRODUCTO_PRECIO AS precio_unitario,
+						PRODUCTO_MARCA AS marca,
+						PRODUCTO_DESCRIPCION AS descripcion,
+						SC.id_subcategoria AS id_subcategoria
+		FROM gd_esquema.Maestra
+		INNER JOIN Sub_Categoria SC ON SC.nombre = PRODUCTO_SUB_CATEGORIA
+		WHERE PRODUCTO_NOMBRE IS NOT NULL AND PRODUCTO_MARCA IS NOT NULL AND PRODUCTO_PRECIO IS NOT NULL AND PRODUCTO_DESCRIPCION IS NOT NULL
 END
 GO
 
@@ -690,7 +733,11 @@ CREATE PROCEDURE ALBONDIGA.migrar_Medio_Pago
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los medios de pago...'
-    /* comportamiento del procedure */
+    INSERT INTO Medio_Pago(medio_pago, id_tipo_medio_pago)
+		SELECT DISTINCT PAGO_MEDIO_PAGO AS medio_pago, T.id_tipo_medio_pago
+		FROM gd_esquema.Maestra
+		INNER JOIN Tipo_Medio_Pago T ON T.tipo_pago = PAGO_TIPO_MEDIO_PAGO
+		WHERE PAGO_MEDIO_PAGO IS NOT NULL
 END
 GO
 
@@ -698,17 +745,47 @@ CREATE PROCEDURE ALBONDIGA.migrar_Descuento_Por_Medio_Pago
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los descuentos por medio de pago...'
-    /* comportamiento del procedure */
+    INSERT INTO Descuento_Por_Medio_Pago(codigo, id_medio_pago, descripcion, fecha_inicio, fecha_fin, tope, descuento_porcentaje)
+		SELECT DISTINCT DESCUENTO_CODIGO AS codigo,
+				T.id_tipo_medio_pago AS id_medio_pago,
+				DESCUENTO_DESCRIPCION AS descripcion,
+				DESCUENTO_FECHA_INICIO AS fecha_inicio,
+				DESCUENTO_FECHA_FIN AS fecha_fin,
+				DESCUENTO_TOPE AS tope,
+				DESCUENTO_PORCENTAJE_DESC AS descuento_porcentaje
+		FROM gd_esquema.Maestra
+		INNER JOIN Tipo_Medio_Pago T ON T.tipo_pago = PAGO_TIPO_MEDIO_PAGO
+		WHERE DESCUENTO_CODIGO IS NOT NULL
 END
 GO
 
-CREATE PROCEDURE ALBONDIGA.migrar_Domicilio
+CREATE PROCEDURE ALBONDIGA.migrar_Domicilio -- ESTO NO SE SI FUNCIONA BIEN, REVISAR LOCALIDAD TAMBIEN
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los domicilios...'
-    /* comportamiento del procedure */
+    INSERT INTO Domicilio(calle_y_numero, id_localidad)
+		SELECT DISTINCT CLIENTE_DOMICILIO, L.id_localidad
+		FROM gd_esquema.Maestra
+		INNER JOIN Localidad L ON L.nombre = CLIENTE_LOCALIDAD
+		INNER JOIN Provincia P ON P.id_provincia = L.id_provincia --P.nombre = CLIENTE_PROVINCIA
+		WHERE CLIENTE_DOMICILIO IS NOT NULL
+		UNION
+		SELECT DISTINCT SUPER_DOMICILIO, L.id_localidad 
+		FROM gd_esquema.Maestra
+		INNER JOIN Localidad L ON L.nombre = SUPER_LOCALIDAD
+		INNER JOIN Provincia P ON P.id_provincia = L.id_provincia --ON P.nombre = SUPER_PROVINCIA
+		WHERE SUPER_DOMICILIO IS NOT NULL
+		UNION
+		SELECT DISTINCT SUCURSAL_DIRECCION, L.id_localidad
+		FROM gd_esquema.Maestra
+		INNER JOIN Localidad L ON L.nombre = SUCURSAL_LOCALIDAD
+		INNER JOIN Provincia P ON P.id_provincia = L.id_provincia --ON P.nombre = SUCURSAL_PROVINCIA
+		WHERE SUCURSAL_DIRECCION IS NOT NULL
 END
 GO
+
+--SELECT * FROM ALBONDIGA.Domicilio
+--SELECT * FROM ALBONDIGA.Localidad
 
 CREATE PROCEDURE ALBONDIGA.migrar_Cliente
 AS
@@ -832,16 +909,11 @@ GO
 
 
 --------------------------- Ejecutar stores procedures ---------------------------
-/*PRUEBA: FUNCIONA!!!*/
+/*LOS QUE YA FUNCIONAN*/
 EXEC ALBONDIGA.migrar_Estado_Envio;
-
-select * from ALBONDIGA.Estado_Envio
-
-/*
 EXEC ALBONDIGA.migrar_Provincia;
 EXEC ALBONDIGA.migrar_Tipo_Medio_Pago;
 EXEC ALBONDIGA.migrar_Tipo_Comprobante;
-EXEC ALBONDIGA.migrar_Promocion;
 EXEC ALBONDIGA.migrar_Regla;
 EXEC ALBONDIGA.migrar_Categoria;
 EXEC ALBONDIGA.migrar_Sub_Categoria;
@@ -851,6 +923,9 @@ EXEC ALBONDIGA.migrar_Producto;
 EXEC ALBONDIGA.migrar_Medio_Pago;
 EXEC ALBONDIGA.migrar_Descuento_Por_Medio_Pago;
 EXEC ALBONDIGA.migrar_Domicilio;
+
+/*
+EXEC ALBONDIGA.migrar_Promocion;
 EXEC ALBONDIGA.migrar_Cliente;
 EXEC ALBONDIGA.migrar_Supermercado;
 EXEC ALBONDIGA.migrar_Tarjeta;
