@@ -245,7 +245,8 @@ CREATE TABLE ALBONDIGA.Tipo_Comprobante (
 );
 
 CREATE TABLE ALBONDIGA.Promocion (
-    id_promocion INT PRIMARY KEY NOT NULL,
+	id_promocion INT IDENTITY(1,1) PRIMARY KEY,
+    codigo DECIMAL(18,0) NOT NULL,
     descuento_aplicado DECIMAL(18,2) NOT NULL,
     descripcion NVARCHAR(255) NOT NULL,
     fecha_inicio DATETIME NOT NULL,
@@ -384,7 +385,6 @@ CREATE TABLE ALBONDIGA.Ticket (
     id_caja INT NOT NULL,
     id_empleado INT NOT NULL,
     id_tipo_de_comprobante INT NOT NULL,
-    id_productos INT NOT NULL,
     sub_total_ticket DECIMAL(18,2) NOT NULL,
     total_promociones DECIMAL(18,2) NOT NULL,
     total_descuento_medio_pago DECIMAL(18,2) NOT NULL,
@@ -442,10 +442,6 @@ CREATE TABLE ALBONDIGA.Categoria_x_Subcategoria (
 );
 
 --------------------------- Agregar FKs ---------------------------
-/*ALTER TABLE MargeCreoQueOdioGDD.local
-ADD CONSTRAINT FK_DIRECCION_LOCAL
-FOREIGN KEY (ID_DIRECCION) REFERENCES MargeCreoQueOdioGDD.direccion
-*/
 ALTER TABLE ALBONDIGA.Localidad
 ADD CONSTRAINT FK_Localidad_Provincia
 FOREIGN KEY (id_provincia) REFERENCES ALBONDIGA.Provincia(id_provincia);
@@ -517,11 +513,6 @@ FOREIGN KEY (id_empleado) REFERENCES ALBONDIGA.Empleado(legajo);
 ALTER TABLE ALBONDIGA.Ticket
 ADD CONSTRAINT FK_Ticket_Tipo_Comprobante
 FOREIGN KEY (id_tipo_de_comprobante) REFERENCES ALBONDIGA.Tipo_Comprobante(id_tipo_comprobante);
-
---ESTO NO SE SI ESTA BIEN, REVISAR ATRIBUTO
-ALTER TABLE ALBONDIGA.Ticket
-ADD CONSTRAINT FK_Ticket_Producto
-FOREIGN KEY (id_productos) REFERENCES ALBONDIGA.Producto(codigo);
 
 ALTER TABLE ALBONDIGA.Envio
 ADD CONSTRAINT FK_Envio_Cliente
@@ -637,15 +628,13 @@ CREATE PROCEDURE ALBONDIGA.migrar_Promocion
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las promociones...'
-   /* INSERT INTO Promocion(id_promocion, descuento_aplicado, descripcion, fecha_inicio, fecha_fin)
-		SELECT DISTINCT PROMO_CODIGO AS id_promocion, 
+    INSERT INTO Promocion(codigo, descuento_aplicado, descripcion, fecha_inicio, fecha_fin)
+		SELECT DISTINCT PROMO_CODIGO AS codigo, 
 						PROMO_APLICADA_DESCUENTO AS descuento_aplicado,
 						PROMOCION_DESCRIPCION AS descripcion,
 						PROMOCION_FECHA_INICIO AS fecha_inicio,
 						PROMOCION_FECHA_INICIO AS fecha_fin
-		from gd_esquema.Maestra WHERE PROMO_CODIGO IS NOT NULL */
-
-		-- ESTO HAY QUE REPENSARLO PORQUE TIENE CODIGOS DUPLICADOS, NO PUEDE SER PK
+		from gd_esquema.Maestra WHERE PROMO_CODIGO IS NOT NULL
 END
 GO
 
@@ -699,16 +688,16 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar las localidades...'
     INSERT INTO Localidad(nombre, id_provincia)
-		SELECT DISTINCT CLIENTE_LOCALIDAD AS nombre, P.id_provincia FROM gd_esquema.Maestra
-		INNER JOIN Provincia P ON P.nombre = CLIENTE_PROVINCIA 
+		SELECT DISTINCT CLIENTE_LOCALIDAD AS nombre, P1.id_provincia FROM gd_esquema.Maestra
+		INNER JOIN Provincia P1 ON P1.nombre = CLIENTE_PROVINCIA 
 		WHERE CLIENTE_LOCALIDAD IS NOT NULL
 		UNION
-		SELECT DISTINCT SUCURSAL_LOCALIDAD AS nombre, P.id_provincia FROM gd_esquema.Maestra
-		INNER JOIN Provincia P ON P.nombre = SUCURSAL_PROVINCIA
+		SELECT DISTINCT SUCURSAL_LOCALIDAD AS nombre, P2.id_provincia FROM gd_esquema.Maestra
+		INNER JOIN Provincia P2 ON P2.nombre = SUCURSAL_PROVINCIA
 		WHERE SUCURSAL_LOCALIDAD IS NOT NULL
 		UNION
-		SELECT DISTINCT SUPER_LOCALIDAD AS nombre, P.id_provincia FROM gd_esquema.Maestra
-		INNER JOIN Provincia P ON P.nombre = SUPER_PROVINCIA
+		SELECT DISTINCT SUPER_LOCALIDAD AS nombre, P3.id_provincia FROM gd_esquema.Maestra
+		INNER JOIN Provincia P3 ON P3.nombre = SUPER_PROVINCIA
 		WHERE SUPER_LOCALIDAD IS NOT NULL
 END
 GO
@@ -759,39 +748,49 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE ALBONDIGA.migrar_Domicilio -- ESTO NO SE SI FUNCIONA BIEN, REVISAR LOCALIDAD TAMBIEN
+CREATE PROCEDURE ALBONDIGA.migrar_Domicilio
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los domicilios...'
     INSERT INTO Domicilio(calle_y_numero, id_localidad)
-		SELECT DISTINCT CLIENTE_DOMICILIO, L.id_localidad
+		SELECT DISTINCT CLIENTE_DOMICILIO, L1.id_localidad
 		FROM gd_esquema.Maestra
-		INNER JOIN Localidad L ON L.nombre = CLIENTE_LOCALIDAD
-		INNER JOIN Provincia P ON P.id_provincia = L.id_provincia --P.nombre = CLIENTE_PROVINCIA
+		INNER JOIN Localidad L1 ON L1.nombre = CLIENTE_LOCALIDAD
+		INNER JOIN Provincia P1 ON P1.nombre = CLIENTE_PROVINCIA AND L1.id_provincia = P1.id_provincia
 		WHERE CLIENTE_DOMICILIO IS NOT NULL
 		UNION
-		SELECT DISTINCT SUPER_DOMICILIO, L.id_localidad 
+		SELECT DISTINCT SUPER_DOMICILIO, L2.id_localidad 
 		FROM gd_esquema.Maestra
-		INNER JOIN Localidad L ON L.nombre = SUPER_LOCALIDAD
-		INNER JOIN Provincia P ON P.id_provincia = L.id_provincia --ON P.nombre = SUPER_PROVINCIA
+		INNER JOIN Localidad L2 ON L2.nombre = SUPER_LOCALIDAD
+		INNER JOIN Provincia P2 ON P2.nombre = CLIENTE_PROVINCIA AND L2.id_provincia = P2.id_provincia
 		WHERE SUPER_DOMICILIO IS NOT NULL
 		UNION
-		SELECT DISTINCT SUCURSAL_DIRECCION, L.id_localidad
+		SELECT DISTINCT SUCURSAL_DIRECCION, L3.id_localidad
 		FROM gd_esquema.Maestra
-		INNER JOIN Localidad L ON L.nombre = SUCURSAL_LOCALIDAD
-		INNER JOIN Provincia P ON P.id_provincia = L.id_provincia --ON P.nombre = SUCURSAL_PROVINCIA
+		INNER JOIN Localidad L3 ON L3.nombre = SUCURSAL_LOCALIDAD
+		INNER JOIN Provincia P3 ON P3.nombre = CLIENTE_PROVINCIA AND L3.id_provincia = P3.id_provincia
 		WHERE SUCURSAL_DIRECCION IS NOT NULL
 END
 GO
-
---SELECT * FROM ALBONDIGA.Domicilio
---SELECT * FROM ALBONDIGA.Localidad
 
 CREATE PROCEDURE ALBONDIGA.migrar_Cliente
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los clientes...'
-    /* comportamiento del procedure */
+    INSERT INTO Cliente(nombre, apellido, dni, fecha_registro, telefono, mail, fecha_nacimiento, id_domicilio)
+		SELECT DISTINCT CLIENTE_NOMBRE AS nombre,
+						CLIENTE_APELLIDO AS apellido,
+						CLIENTE_DNI AS dni,
+						CLIENTE_FECHA_REGISTRO AS fecha_registro,
+						CLIENTE_TELEFONO AS telefono,
+						CLIENTE_MAIL AS mail,
+						CLIENTE_FECHA_NACIMIENTO AS fecha_nacimiento,
+						D.id_domicilio AS id_domicilio 
+		FROM gd_esquema.Maestra
+		INNER JOIN Domicilio D ON D.calle_y_numero = CLIENTE_DOMICILIO
+		INNER JOIN Localidad L ON L.nombre = CLIENTE_LOCALIDAD AND L.id_localidad = D.id_localidad
+		INNER JOIN Provincia P ON P.nombre = CLIENTE_PROVINCIA AND P.id_provincia = L.id_provincia
+		WHERE CLIENTE_NOMBRE IS NOT NULL AND CLIENTE_DNI IS NOT NULL AND CLIENTE_DOMICILIO IS NOT NULL
 END
 GO
 
@@ -799,7 +798,20 @@ CREATE PROCEDURE ALBONDIGA.migrar_Supermercado
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los supermercados...'
-    /* comportamiento del procedure */
+    INSERT INTO Supermercado(nombre, razon_social, cuit, ingresos_brutos, id_domicilio, fecha_inicio_actividad, condicion_fiscal)
+		SELECT DISTINCT SUPER_NOMBRE AS nombre,
+						SUPER_RAZON_SOC AS razon_social,
+						SUPER_CUIT AS cuit,
+						SUPER_IIBB AS ingresos_brutos,
+						D.id_domicilio AS id_domicilio,
+						SUPER_FECHA_INI_ACTIVIDAD AS fecha_inicio_actividad,
+						SUPER_CONDICION_FISCAL AS condicion_fiscal 
+		FROM gd_esquema.Maestra
+		INNER JOIN Domicilio D ON D.calle_y_numero = SUPER_DOMICILIO
+		INNER JOIN Localidad L ON L.nombre = SUPER_LOCALIDAD AND L.id_localidad = D.id_localidad
+		INNER JOIN Provincia P ON P.nombre = SUPER_PROVINCIA AND P.id_provincia = L.id_provincia
+		WHERE SUPER_NOMBRE IS NOT NULL AND SUPER_RAZON_SOC IS NOT NULL AND SUPER_CUIT IS NOT NULL AND SUPER_IIBB IS NOT NULL AND SUPER_FECHA_INI_ACTIVIDAD IS NOT NULL
+		AND SUPER_DOMICILIO IS NOT NULL
 END
 GO
 
@@ -910,10 +922,12 @@ GO
 
 --------------------------- Ejecutar stores procedures ---------------------------
 /*LOS QUE YA FUNCIONAN*/
+
 EXEC ALBONDIGA.migrar_Estado_Envio;
 EXEC ALBONDIGA.migrar_Provincia;
 EXEC ALBONDIGA.migrar_Tipo_Medio_Pago;
 EXEC ALBONDIGA.migrar_Tipo_Comprobante;
+EXEC ALBONDIGA.migrar_Promocion;
 EXEC ALBONDIGA.migrar_Regla;
 EXEC ALBONDIGA.migrar_Categoria;
 EXEC ALBONDIGA.migrar_Sub_Categoria;
@@ -923,11 +937,10 @@ EXEC ALBONDIGA.migrar_Producto;
 EXEC ALBONDIGA.migrar_Medio_Pago;
 EXEC ALBONDIGA.migrar_Descuento_Por_Medio_Pago;
 EXEC ALBONDIGA.migrar_Domicilio;
-
-/*
-EXEC ALBONDIGA.migrar_Promocion;
 EXEC ALBONDIGA.migrar_Cliente;
 EXEC ALBONDIGA.migrar_Supermercado;
+
+/*
 EXEC ALBONDIGA.migrar_Tarjeta;
 EXEC ALBONDIGA.migrar_Sucursal;
 EXEC ALBONDIGA.migrar_Empleado;
