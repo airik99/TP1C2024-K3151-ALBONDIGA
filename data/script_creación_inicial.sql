@@ -341,7 +341,7 @@ CREATE TABLE ALBONDIGA.Supermercado (
 
 CREATE TABLE ALBONDIGA.Tarjeta (
     id_tarjeta INT IDENTITY(1,1) PRIMARY KEY,
-    id_cliente INT NOT NULL,
+    -- id_cliente INT NOT NULL, EN LA TABLA MAESTRA SON TODOS NULLS LOS CLIENTES, LAS TARJETAS NO ESTAN LIGADOS A LOS CLIENTES
     nro_tarjeta NVARCHAR(255) NOT NULL,
     fecha_vencimiento DATETIME NOT NULL
 );
@@ -465,10 +465,10 @@ FOREIGN KEY (id_localidad) REFERENCES ALBONDIGA.Localidad(id_localidad);
 ALTER TABLE ALBONDIGA.Cliente
 ADD CONSTRAINT FK_Cliente_Domicilio
 FOREIGN KEY (id_domicilio) REFERENCES ALBONDIGA.Domicilio(id_domicilio);
-
+/*
 ALTER TABLE ALBONDIGA.Tarjeta
 ADD CONSTRAINT FK_Tarjeta_Cliente
-FOREIGN KEY (id_cliente) REFERENCES ALBONDIGA.Cliente(id_cliente);
+FOREIGN KEY (id_cliente) REFERENCES ALBONDIGA.Cliente(id_cliente);*/
 
 ALTER TABLE ALBONDIGA.Sucursal
 ADD CONSTRAINT FK_Sucursal_Supermercado
@@ -819,17 +819,47 @@ CREATE PROCEDURE ALBONDIGA.migrar_Tarjeta
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las tarjetas...'
-    /* comportamiento del procedure */
+	INSERT INTO Tarjeta(nro_tarjeta,fecha_vencimiento)
+	SELECT DISTINCT 
+	Maestra.PAGO_TARJETA_NRO as nro_tarjeta,
+	Maestra.PAGO_TARJETA_FECHA_VENC as fecha_vencimiento 
+	FROM gd_esquema.Maestra
+	WHERE  Maestra.PAGO_TARJETA_NRO is not null and Maestra.PAGO_TARJETA_FECHA_VENC is not null
 END
+
 GO
 
 CREATE PROCEDURE ALBONDIGA.migrar_Sucursal
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las sucursales...'
+	INSERT INTO Sucursal(id_supermercado,nombre,id_direccion)
+	SELECT DISTINCT 
+	s.id_supermercado as id_supermercado,
+	gd_esquema.Maestra.SUCURSAL_NOMBRE as nombre,
+	d.id_domicilio as id_direccion
+	FROM gd_esquema.Maestra
+	INNER JOIN ALBONDIGA.Supermercado s on s.cuit = SUPER_CUIT
+	inner join ALBONDIGA.Domicilio d on d.calle_y_numero = gd_esquema.Maestra.SUCURSAL_DIRECCION
+	INNER JOIN ALBONDIGA.Localidad L ON L.nombre = SUCURSAL_LOCALIDAD AND L.id_localidad = D.id_localidad
+	INNER JOIN ALBONDIGA.Provincia P ON P.nombre = SUCURSAL_PROVINCIA AND P.id_provincia = L.id_provincia
+	WHERE gd_esquema.Maestra.SUCURSAL_NOMBRE is not null
     /* comportamiento del procedure */
 END
+
+select SUCURSAL_DIRECCION from gd_esquema.Maestra
+group by SUCURSAL_DIRECCION
+
+select * from ALBONDIGA.Domicilio where Domicilio.calle_y_numero like 'Avenida Álvarez Thomas 8995'
+
+select * from ALBONDIGA.Supermercado --id_domicilio 2943
+
+select  * from ALBONDIGA.Domicilio  where id_domicilio=2943
+
+
 GO
+
+select * from ALBONDIGA.Domicilio
 
 CREATE PROCEDURE ALBONDIGA.migrar_Empleado
 AS
