@@ -373,7 +373,7 @@ CREATE TABLE ALBONDIGA.Caja (
 
 CREATE TABLE ALBONDIGA.Detalle_Pago (
     id_detalle_pago INT IDENTITY(1,1) PRIMARY KEY,
-    id_cliente INT NOT NULL,
+    --id_cliente INT NOT NULL,
     id_tarjeta INT NOT NULL,
     cuotas DECIMAL(18,0) NOT NULL
 );
@@ -490,9 +490,9 @@ ALTER TABLE ALBONDIGA.Caja
 ADD CONSTRAINT FK_Caja_Tipo_Caja
 FOREIGN KEY (id_tipo_caja) REFERENCES ALBONDIGA.Tipo_Caja(id_tipo_caja);
 
-ALTER TABLE ALBONDIGA.Detalle_Pago
+/*ALTER TABLE ALBONDIGA.Detalle_Pago
 ADD CONSTRAINT FK_Detalle_Pago_Cliente
-FOREIGN KEY (id_cliente) REFERENCES ALBONDIGA.Cliente(id_cliente);
+FOREIGN KEY (id_cliente) REFERENCES ALBONDIGA.Cliente(id_cliente);*/
 
 ALTER TABLE ALBONDIGA.Detalle_Pago
 ADD CONSTRAINT FK_Detalle_Pago_Tarjeta
@@ -845,7 +845,26 @@ CREATE PROCEDURE ALBONDIGA.migrar_Empleado
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los empleados...'
-    /* comportamiento del procedure */
+		INSERT INTO Empleado(id_sucursal,nombre,apellido,dni,fecha_registro,telefono,mail,fecha_de_nacimiento)
+			SELECT DISTINCT
+			s.nro_de_sucursal as id_sucursal,
+			m.EMPLEADO_NOMBRE as nombre,
+			m.EMPLEADO_APELLIDO as apellido,
+			m.EMPLEADO_DNI as dni,
+			m.EMPLEADO_FECHA_REGISTRO as fecha_registro,
+			m.EMPLEADO_TELEFONO as telefono,
+			m.EMPLEADO_MAIL as mail,
+			m.EMPLEADO_FECHA_NACIMIENTO as fecha_de_nacimiento
+			FROM gd_esquema.Maestra m
+			INNER JOIN Sucursal s on s.nombre = m.SUCURSAL_NOMBRE
+			WHERE 
+			EMPLEADO_NOMBRE is not null and 
+			EMPLEADO_APELLIDO is not null and 
+			EMPLEADO_DNI is not null and 
+			EMPLEADO_FECHA_REGISTRO is not null and
+			EMPLEADO_TELEFONO is not null and
+			EMPLEADO_MAIL is not null and
+			EMPLEADO_FECHA_NACIMIENTO is not null
 END
 GO
 
@@ -861,7 +880,14 @@ CREATE PROCEDURE ALBONDIGA.migrar_Detalle_Pago
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los detalles de pago...'
-    /* comportamiento del procedure */
+		INSERT INTO Detalle_Pago(id_tarjeta,cuotas)
+			SELECT DISTINCT
+			t.id_tarjeta as id_tarjeta,
+			m.PAGO_TARJETA_CUOTAS
+			FROM gd_esquema.Maestra m
+			INNER JOIN Tarjeta t on t.nro_tarjeta = m.PAGO_TARJETA_NRO
+			WHERE m.PAGO_TARJETA_CUOTAS is not null
+
 END
 GO
 
@@ -929,7 +955,6 @@ BEGIN
 END
 GO
 
-
 --------------------------- Ejecutar stores procedures ---------------------------
 /*LOS QUE YA FUNCIONAN*/
 
@@ -951,11 +976,11 @@ EXEC ALBONDIGA.migrar_Cliente;
 EXEC ALBONDIGA.migrar_Supermercado;
 EXEC ALBONDIGA.migrar_Tarjeta;
 EXEC ALBONDIGA.migrar_Sucursal;
+EXEC ALBONDIGA.migrar_Empleado;
+EXEC ALBONDIGA.migrar_Detalle_Pago;
 
 /*
-EXEC ALBONDIGA.migrar_Empleado;
 EXEC ALBONDIGA.migrar_Caja;
-EXEC ALBONDIGA.migrar_Detalle_Pago;
 EXEC ALBONDIGA.migrar_Ticket;
 EXEC ALBONDIGA.migrar_Envio;
 EXEC ALBONDIGA.migrar_Pago;
