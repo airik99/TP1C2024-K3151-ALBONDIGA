@@ -366,7 +366,8 @@ CREATE TABLE ALBONDIGA.Empleado (
 );
 
 CREATE TABLE ALBONDIGA.Caja (
-    numero INT PRIMARY KEY NOT NULL,
+	id_caja INT IDENTITY(1,1) PRIMARY KEY, -- numero no puede ser PK porque hay un mismo numero de caja en distintas sucursales, cambiarlo en el der
+    numero INT NOT NULL,
     id_sucursal INT NOT NULL,
     id_tipo_caja INT NOT NULL
 );
@@ -504,7 +505,7 @@ FOREIGN KEY (id_sucursal) REFERENCES ALBONDIGA.Sucursal(nro_de_sucursal);
 
 ALTER TABLE ALBONDIGA.Ticket
 ADD CONSTRAINT FK_Ticket_Caja
-FOREIGN KEY (id_caja) REFERENCES ALBONDIGA.Caja(numero);
+FOREIGN KEY (id_caja) REFERENCES ALBONDIGA.Caja(id_caja);
 
 ALTER TABLE ALBONDIGA.Ticket
 ADD CONSTRAINT FK_Ticket_Empleado
@@ -707,7 +708,7 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los productos...'
     INSERT INTO Producto(nombre, precio_unitario, marca, descripcion, id_subcategoria)
-		SELECT DISTINCT PRODUCTO_NOMBRE AS nombre, -- REVISAR ESTO DESPUES, EN LA MAESTRA NO HAY NINGUN CODIGO, SOLO ESTÁ EL NOMBRE
+		SELECT DISTINCT PRODUCTO_NOMBRE AS nombre, -- REVISAR ESTO DESPUES, EN LA MAESTRA NO HAY NINGUN CODIGO, SOLO ESTï¿½ EL NOMBRE
 						PRODUCTO_PRECIO AS precio_unitario,
 						PRODUCTO_MARCA AS marca,
 						PRODUCTO_DESCRIPCION AS descripcion,
@@ -872,7 +873,14 @@ CREATE PROCEDURE ALBONDIGA.migrar_Caja
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las cajas...'
-    /* comportamiento del procedure */
+	INSERT INTO Caja(numero, id_sucursal, id_tipo_caja)
+		SELECT DISTINCT CAJA_NUMERO AS numero,
+						S.nro_de_sucursal AS id_sucursal,
+						T.id_tipo_caja AS id_tipo_caja
+		FROM gd_esquema.Maestra
+		INNER JOIN Sucursal S ON S.nombre = SUCURSAL_NOMBRE
+		INNER JOIN Tipo_Caja T ON T.tipo_caja = CAJA_TIPO
+		WHERE CAJA_NUMERO IS NOT NULL
 END
 GO
 
@@ -977,10 +985,10 @@ EXEC ALBONDIGA.migrar_Supermercado;
 EXEC ALBONDIGA.migrar_Tarjeta;
 EXEC ALBONDIGA.migrar_Sucursal;
 EXEC ALBONDIGA.migrar_Empleado;
+EXEC ALBONDIGA.migrar_Caja;
 EXEC ALBONDIGA.migrar_Detalle_Pago;
 
 /*
-EXEC ALBONDIGA.migrar_Caja;
 EXEC ALBONDIGA.migrar_Ticket;
 EXEC ALBONDIGA.migrar_Envio;
 EXEC ALBONDIGA.migrar_Pago;
