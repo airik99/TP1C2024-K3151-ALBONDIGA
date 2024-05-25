@@ -762,13 +762,12 @@ BEGIN
 		SELECT DISTINCT SUPER_DOMICILIO, L2.id_localidad 
 		FROM gd_esquema.Maestra
 		INNER JOIN Localidad L2 ON L2.nombre = SUPER_LOCALIDAD
-		INNER JOIN Provincia P2 ON P2.nombre = CLIENTE_PROVINCIA AND L2.id_provincia = P2.id_provincia
+		INNER JOIN Provincia P2 ON P2.nombre = SUPER_PROVINCIA AND L2.id_provincia = P2.id_provincia
 		WHERE SUPER_DOMICILIO IS NOT NULL
 		UNION
 		SELECT DISTINCT SUCURSAL_DIRECCION, L3.id_localidad
 		FROM gd_esquema.Maestra
 		INNER JOIN Localidad L3 ON L3.nombre = SUCURSAL_LOCALIDAD
-		INNER JOIN Provincia P3 ON P3.nombre = CLIENTE_PROVINCIA AND L3.id_provincia = P3.id_provincia
 		WHERE SUCURSAL_DIRECCION IS NOT NULL
 END
 GO
@@ -831,17 +830,14 @@ CREATE PROCEDURE ALBONDIGA.migrar_Sucursal
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las sucursales...'
-	/*INSERT INTO Sucursal(id_supermercado,nombre,id_direccion)
-	SELECT DISTINCT 
-	s.id_supermercado as id_supermercado,
-	gd_esquema.Maestra.SUCURSAL_NOMBRE as nombre,
-	d.id_domicilio as id_direccion
-	FROM gd_esquema.Maestra
-	INNER JOIN ALBONDIGA.Supermercado s on s.cuit = SUPER_CUIT
-	inner join ALBONDIGA.Domicilio d on d.calle_y_numero = gd_esquema.Maestra.SUCURSAL_DIRECCION
-	INNER JOIN ALBONDIGA.Localidad L ON L.nombre = SUCURSAL_LOCALIDAD AND L.id_localidad = D.id_localidad
-	INNER JOIN ALBONDIGA.Provincia P ON P.nombre = SUCURSAL_PROVINCIA AND P.id_provincia = L.id_provincia
-	WHERE gd_esquema.Maestra.SUCURSAL_NOMBRE IS NOT NULL*/
+	INSERT INTO Sucursal(nombre, id_supermercado, id_direccion)
+		SELECT DISTINCT SUCURSAL_NOMBRE AS nombre,
+						S.id_supermercado AS id_supermercado,
+						D.id_domicilio AS id_direccion
+		FROM gd_esquema.Maestra
+		INNER JOIN Supermercado S ON S.nombre = SUPER_NOMBRE AND S.cuit = SUPER_CUIT
+		INNER JOIN Domicilio D ON D.calle_y_numero = SUCURSAL_DIRECCION
+		WHERE SUCURSAL_NOMBRE IS NOT NULL AND SUCURSAL_DIRECCION IS NOT NULL AND SUCURSAL_LOCALIDAD IS NOT NULL AND SUCURSAL_PROVINCIA IS NOT NULL
 END
 GO
 
@@ -954,10 +950,9 @@ EXEC ALBONDIGA.migrar_Domicilio;
 EXEC ALBONDIGA.migrar_Cliente;
 EXEC ALBONDIGA.migrar_Supermercado;
 EXEC ALBONDIGA.migrar_Tarjeta;
-
+EXEC ALBONDIGA.migrar_Sucursal;
 
 /*
-EXEC ALBONDIGA.migrar_Sucursal;
 EXEC ALBONDIGA.migrar_Empleado;
 EXEC ALBONDIGA.migrar_Caja;
 EXEC ALBONDIGA.migrar_Detalle_Pago;
