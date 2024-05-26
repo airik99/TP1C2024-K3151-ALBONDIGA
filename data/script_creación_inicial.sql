@@ -247,7 +247,6 @@ CREATE TABLE ALBONDIGA.Tipo_Comprobante (
 CREATE TABLE ALBONDIGA.Promocion (
 	id_promocion INT IDENTITY(1,1) PRIMARY KEY,
     codigo DECIMAL(18,0) NOT NULL,
-    descuento_aplicado DECIMAL(18,2) NOT NULL,
     descripcion NVARCHAR(255) NOT NULL,
     fecha_inicio DATETIME NOT NULL,
     fecha_fin DATETIME NOT NULL
@@ -419,7 +418,8 @@ CREATE TABLE ALBONDIGA.Pago (
 
 CREATE TABLE ALBONDIGA.Promocion_x_Ticket (
     id_promocion INT NOT NULL,
-    nro_de_ticket INT NOT NULL
+    id_ticket INT NOT NULL,
+	descuento_aplicado DECIMAL(18,2) NOT NULL,
 );
 
 CREATE TABLE ALBONDIGA.Promocion_x_Producto (
@@ -552,7 +552,7 @@ FOREIGN KEY (id_promocion) REFERENCES ALBONDIGA.Promocion(id_promocion);
 
 ALTER TABLE ALBONDIGA.Promocion_x_Ticket
 ADD CONSTRAINT FK_Promocion_x_Ticket_Ticket
-FOREIGN KEY (nro_de_ticket) REFERENCES ALBONDIGA.Ticket(id_ticket);
+FOREIGN KEY (id_ticket) REFERENCES ALBONDIGA.Ticket(id_ticket);
 
 ALTER TABLE ALBONDIGA.Promocion_x_Producto
 ADD CONSTRAINT FK_Promocion_x_Producto_Promocion
@@ -586,8 +586,6 @@ ALTER TABLE ALBONDIGA.Categoria_x_Subcategoria
 ADD CONSTRAINT FK_Categoria_x_Subcategoria_Subcategoria
 FOREIGN KEY (id_subcategoria) REFERENCES ALBONDIGA.Sub_Categoria(id_subcategoria);
 GO
-
---------------------------- Crear Funciones ---------------------------
 
 --------------------------- Crear stores procedures ---------------------------
 CREATE PROCEDURE ALBONDIGA.migrar_Estado_Envio
@@ -632,9 +630,8 @@ CREATE PROCEDURE ALBONDIGA.migrar_Promocion
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las promociones...'
-    INSERT INTO Promocion(codigo, descuento_aplicado, descripcion, fecha_inicio, fecha_fin)
+    INSERT INTO Promocion(codigo, descripcion, fecha_inicio, fecha_fin)
 		SELECT DISTINCT PROMO_CODIGO AS codigo, 
-						PROMO_APLICADA_DESCUENTO AS descuento_aplicado,
 						PROMOCION_DESCRIPCION AS descripcion,
 						PROMOCION_FECHA_INICIO AS fecha_inicio,
 						PROMOCION_FECHA_INICIO AS fecha_fin
@@ -931,13 +928,9 @@ BEGIN
 				TICKET_SUBTOTAL_PRODUCTOS is not null and
 				TICKET_TOTAL_DESCUENTO_APLICADO is not null and
 				TICKET_TOTAL_DESCUENTO_APLICADO_MP is not null and
-				TICKET_TOTAL_TICKET is not null --17 068
+				TICKET_TOTAL_TICKET is not null
 END
 GO
-
---select count(distinct TICKET_NUMERO) from gd_esquema.Maestra--17 025
-
---select TICKET_NUMERO,* from gd_esquema.Maestra where TICKET_NUMERO = 1351388438
 
 CREATE PROCEDURE ALBONDIGA.migrar_Envio
 AS
@@ -955,7 +948,7 @@ BEGIN
 				ee.id_estado_envio AS id_estado_envio
 				FROM gd_esquema.Maestra m
 				INNER JOIN ALBONDIGA.Cliente c on c.dni = m.CLIENTE_DNI and c.mail = m.CLIENTE_MAIL
-				INNER JOIN ALBONDIGA.Sucursal s on s.nombre = m.SUCURSAL_NOMBRE --pq lo necesito abajo
+				INNER JOIN ALBONDIGA.Sucursal s on s.nombre = m.SUCURSAL_NOMBRE
 				INNER JOIN ALBONDIGA.Ticket t on t.nro_de_ticket = m.TICKET_NUMERO and t.id_sucursal = s.nro_de_sucursal
 				INNER JOIN ALBONDIGA.Estado_Envio ee on ee.descripcion = m.ENVIO_ESTADO
 				WHERE 
@@ -971,56 +964,32 @@ CREATE PROCEDURE ALBONDIGA.migrar_Pago
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los pagos...'
-	    	/*INSERT INTO Pago(fecha_y_hora,id_ticket,id_medio_pago,id_detalle_pago,id_descuento_por_medio_pago,importe)
-				SELECT DISTINCT
-				m.PAGO_FECHA AS fecha_y_hora,
-				t.id_ticket AS id_ticket,
-				mp.id_medio_pago AS id_medio_pago,
-				--'dp.id_detalle_pago' AS id_detalle_pago,
-				--'p.codigo' AS id_descuento_por_medio_pago,
-				m.PAGO_IMPORTE AS importe
-				FROM gd_esquema.Maestra m
-				INNER JOIN ALBONDIGA.Sucursal s on s.nombre = m.SUCURSAL_NOMBRE --pq lo necesito abajo
-				INNER JOIN ALBONDIGA.Ticket t on t.nro_de_ticket = m.TICKET_NUMERO and t.id_sucursal = s.nro_de_sucursal
-				INNER JOIN ALBONDIGA.Medio_Pago mp on mp.medio_pago = m.PAGO_MEDIO_PAGO
-				--INNER JOIN ALBONDIGA.Tarjeta ta on ta.nro_tarjeta = m.PAGO_TARJETA_NRO --pq lo necesito abajo
-				--INNER JOIN ALBONDIGA.Detalle_Pago dp on dp.id_tarjeta = ta.id_tarjeta
-				--INNER JOIN ALBONDIGA.Descuento_Por_Medio_Pago p on p.id_medio_pago = mp.id_medio_pago and p.fecha_fin = m.DESCUENTO_FECHA_FIN--and p.descuento_porcentaje = m.DESCUENTO_PORCENTAJE_DESC
-				WHERE 
-				PAGO_FECHA is not null and
-				PAGO_IMPORTE is not null and
-				DESCUENTO_FECHA_FIN is not null*/
+	    	INSERT INTO Pago(fecha_y_hora, importe, id_ticket, id_medio_pago, id_detalle_pago, id_descuento_medio_pago)
+				SELECT DISTINCT PAGO_FECHA,
+								PAGO_IMPORTE,
+								(SELECT TOP 1 T.id_ticket FROM ALBONDIGA.Ticket T WHERE T.nro_de_ticket = TICKET_NUMERO) AS id_ticket,
+								(SELECT TOP 1 M.id_medio_pago FROM ALBONDIGA.Medio_Pago M WHERE M.medio_pago = PAGO_MEDIO_PAGO) AS id_medio_pago,
+								(SELECT TOP 1 DP.id_detalle_pago FROM ALBONDIGA.Detalle_Pago DP INNER JOIN ALBONDIGA.Tarjeta T 
+								ON T.id_tarjeta = DP.id_tarjeta WHERE T.nro_tarjeta = PAGO_TARJETA_NRO) AS id_detalle_pago,
+								(SELECT TOP 1 DMP.id_descuento_medio_pago FROM ALBONDIGA.Descuento_Por_Medio_Pago DMP 
+								WHERE DMP.codigo = DESCUENTO_CODIGO AND DMP.fecha_inicio = DESCUENTO_FECHA_INICIO 
+								AND DMP.fecha_fin = DESCUENTO_FECHA_FIN AND DMP.descuento_porcentaje = DESCUENTO_PORCENTAJE_DESC) AS id_descuento_por_medio_pago
+				FROM gd_esquema.Maestra
+				WHERE PAGO_FECHA IS NOT NULL AND PAGO_IMPORTE IS NOT NULL AND TICKET_NUMERO IS NOT NULL
 END
 GO
-
--- 1352673365	Sucursal N°:40000 2veces
--- 1353429485	Sucursal N°:70000 2veces
-/*
-select TICKET_NUMERO, SUCURSAL_NOMBRE, PAGO_MEDIO_PAGO, count(*) from gd_esquema.Maestra
-where PAGO_MEDIO_PAGO is not null
-group by TICKET_NUMERO, SUCURSAL_NOMBRE, PAGO_MEDIO_PAGO
-having count(*) > 1
-
-select * from gd_esquema.Maestra
-where TICKET_NUMERO = 1352673365 --and PAGO_MEDIO_PAGO is not null
-
-select PAGO_MEDIO_PAGO from gd_esquema.Maestra
-where PAGO_MEDIO_PAGO is not null
-
---select * from ALBONDIGA.Detalle_Pago
-
-select --PAGO_DESCUENTO_APLICADO,PAGO_FECHA,PAGO_IMPORTE,PAGO_MEDIO_PAGO,PAGO_TARJETA_CUOTAS,PAGO_TARJETA_FECHA_VENC,PAGO_TARJETA_NRO,PAGO_TIPO_MEDIO_PAGO,
-/*DESCUENTO_CODIGO,DESCUENTO_PORCENTAJE_DESC,*/distinct TICKET_NUMERO, SUCURSAL_NOMBRE
-from gd_esquema.Maestra
-where PAGO_DESCUENTO_APLICADO is not null and PAGO_TARJETA_CUOTAS is null and (PAGO_MEDIO_PAGO = 'Efectivo' or PAGO_MEDIO_PAGO = 'Billetera virtual')
-group by TICKET_NUMERO, SUCURSAL_NOMBRE
-*/
 
 CREATE PROCEDURE ALBONDIGA.migrar_Promocion_x_Ticket
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las promociones por ticket...'
-    /* comportamiento del procedure */
+    /*INSERT INTO Promocion_x_Ticket(id_promocion, nro_de_ticket)
+		SELECT p.id_promocion,
+			   t.id_ticket
+		FROM gd_esquema.Maestra
+		INNER JOIN ALBONDIGA.Promocion p ON PROMO_CODIGO = p.codigo --AND p.fecha_inicio = PROMOCION_FECHA_INICIO AND p.fecha_fin = PROMOCION_FECHA_FIN
+		INNER JOIN ALBONDIGA.Ticket t ON t.nro_de_ticket = TICKET_NUMERO --AND t.fecha_y_hora = TICKET_FECHA_HORA
+		WHERE TICKET_NUMERO IS NOT NULL AND PROMO_CODIGO IS NOT NULL*/
 END
 GO
 
@@ -1079,12 +1048,12 @@ EXEC ALBONDIGA.migrar_Tarjeta;
 EXEC ALBONDIGA.migrar_Sucursal;
 EXEC ALBONDIGA.migrar_Empleado;
 EXEC ALBONDIGA.migrar_Caja;
---EXEC ALBONDIGA.migrar_Detalle_Pago;
---EXEC ALBONDIGA.migrar_Ticket;
---EXEC ALBONDIGA.migrar_Envio;
+EXEC ALBONDIGA.migrar_Detalle_Pago;
+EXEC ALBONDIGA.migrar_Ticket;
+EXEC ALBONDIGA.migrar_Envio;
+EXEC ALBONDIGA.migrar_Pago;
 
 /*
-EXEC ALBONDIGA.migrar_Pago;
 EXEC ALBONDIGA.migrar_Promocion_x_Ticket;
 EXEC ALBONDIGA.migrar_Promocion_x_Producto;
 EXEC ALBONDIGA.migrar_Reglas_x_Promocion;
