@@ -307,7 +307,8 @@ CREATE TABLE ALBONDIGA.Descuento_Por_Medio_Pago (
     fecha_inicio DATETIME NOT NULL,
     fecha_fin DATETIME NOT NULL,
     tope DECIMAL(18,2) NOT NULL,
-    descuento_porcentaje DECIMAL(18,2) NOT NULL
+    descuento_porcentaje DECIMAL(18,2) NOT NULL,
+	total_descuento_aplicado DECIMAL(18,2) NOT NULL
 );
 
 CREATE TABLE ALBONDIGA.Domicilio (
@@ -380,7 +381,8 @@ CREATE TABLE ALBONDIGA.Detalle_Pago (
 );
 
 CREATE TABLE ALBONDIGA.Ticket (
-    nro_de_ticket INT PRIMARY KEY NOT NULL,
+	id_ticket INT IDENTITY(1,1) PRIMARY KEY, 
+    nro_de_ticket INT NOT NULL,
     id_sucursal INT NOT NULL,
     fecha_y_hora DATETIME NOT NULL,
     id_caja INT NOT NULL,
@@ -409,7 +411,7 @@ CREATE TABLE ALBONDIGA.Pago (
     fecha_y_hora DATETIME NOT NULL,
     id_ticket INT NOT NULL,
     id_medio_pago INT NOT NULL,
-    id_detalle_pago INT NOT NULL,
+    id_detalle_pago INT,
     id_descuento_por_medio_pago INT,
     importe DECIMAL(18,2) NOT NULL
 );
@@ -521,7 +523,7 @@ FOREIGN KEY (id_cliente) REFERENCES ALBONDIGA.Cliente(id_cliente);
 
 ALTER TABLE ALBONDIGA.Envio
 ADD CONSTRAINT FK_Envio_Ticket
-FOREIGN KEY (id_ticket) REFERENCES ALBONDIGA.Ticket(nro_de_ticket);
+FOREIGN KEY (id_ticket) REFERENCES ALBONDIGA.Ticket(id_ticket);
 
 ALTER TABLE ALBONDIGA.Envio
 ADD CONSTRAINT FK_Envio_Estado_Envio
@@ -529,7 +531,7 @@ FOREIGN KEY (id_estado_envio) REFERENCES ALBONDIGA.Estado_Envio(id_estado_envio)
 
 ALTER TABLE ALBONDIGA.Pago
 ADD CONSTRAINT FK_Pago_Ticket
-FOREIGN KEY (id_ticket) REFERENCES ALBONDIGA.Ticket(nro_de_ticket);
+FOREIGN KEY (id_ticket) REFERENCES ALBONDIGA.Ticket(id_ticket);
 
 ALTER TABLE ALBONDIGA.Pago
 ADD CONSTRAINT FK_Pago_Medio_Pago
@@ -549,7 +551,7 @@ FOREIGN KEY (id_promocion) REFERENCES ALBONDIGA.Promocion(id_promocion);
 
 ALTER TABLE ALBONDIGA.Promocion_x_Ticket
 ADD CONSTRAINT FK_Promocion_x_Ticket_Ticket
-FOREIGN KEY (nro_de_ticket) REFERENCES ALBONDIGA.Ticket(nro_de_ticket);
+FOREIGN KEY (nro_de_ticket) REFERENCES ALBONDIGA.Ticket(id_ticket);
 
 ALTER TABLE ALBONDIGA.Promocion_x_Producto
 ADD CONSTRAINT FK_Promocion_x_Producto_Promocion
@@ -573,7 +575,7 @@ FOREIGN KEY (id_producto) REFERENCES ALBONDIGA.Producto(codigo);
 
 ALTER TABLE ALBONDIGA.Producto_x_Ticket
 ADD CONSTRAINT FK_Producto_x_Ticket_Ticket
-FOREIGN KEY (id_ticket) REFERENCES ALBONDIGA.Ticket(nro_de_ticket);
+FOREIGN KEY (id_ticket) REFERENCES ALBONDIGA.Ticket(id_ticket);
 
 ALTER TABLE ALBONDIGA.Categoria_x_Subcategoria
 ADD CONSTRAINT FK_Categoria_x_Subcategoria_Categoria
@@ -735,14 +737,15 @@ CREATE PROCEDURE ALBONDIGA.migrar_Descuento_Por_Medio_Pago
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los descuentos por medio de pago...'
-    INSERT INTO Descuento_Por_Medio_Pago(codigo, id_medio_pago, descripcion, fecha_inicio, fecha_fin, tope, descuento_porcentaje)
+    INSERT INTO Descuento_Por_Medio_Pago(codigo, id_medio_pago, descripcion, fecha_inicio, fecha_fin, tope, descuento_porcentaje,total_descuento_aplicado)
 		SELECT DISTINCT DESCUENTO_CODIGO AS codigo,
 				T.id_tipo_medio_pago AS id_medio_pago,
 				DESCUENTO_DESCRIPCION AS descripcion,
 				DESCUENTO_FECHA_INICIO AS fecha_inicio,
 				DESCUENTO_FECHA_FIN AS fecha_fin,
 				DESCUENTO_TOPE AS tope,
-				DESCUENTO_PORCENTAJE_DESC AS descuento_porcentaje
+				DESCUENTO_PORCENTAJE_DESC AS descuento_porcentaje,
+				PAGO_DESCUENTO_APLICADO AS total_descuento_aplicado
 		FROM gd_esquema.Maestra
 		INNER JOIN Tipo_Medio_Pago T ON T.tipo_pago = PAGO_TIPO_MEDIO_PAGO
 		WHERE DESCUENTO_CODIGO IS NOT NULL
@@ -902,25 +905,102 @@ CREATE PROCEDURE ALBONDIGA.migrar_Ticket
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los tickets...'
-    /* comportamiento del procedure */
+			INSERT INTO Ticket(
+				nro_de_ticket,id_sucursal,fecha_y_hora,id_caja,id_empleado,id_tipo_de_comprobante,sub_total_ticket,total_promociones,total_descuento_medio_pago,total_venta
+				)
+				SELECT DISTINCT
+				m.TICKET_NUMERO AS nro_de_ticket,
+				s.nro_de_sucursal AS id_sucursal,
+				m.TICKET_FECHA_HORA AS fecha_y_hora,
+				c.id_caja AS id_caja,
+				e.legajo AS id_empleado,
+				tc.id_tipo_comprobante AS id_tipo_de_comprobante,
+				m.TICKET_SUBTOTAL_PRODUCTOS AS sub_total_ticket,
+				m.TICKET_TOTAL_DESCUENTO_APLICADO AS total_promociones,
+				m.TICKET_TOTAL_DESCUENTO_APLICADO_MP AS total_descuento_medio_pago,
+				m.TICKET_TOTAL_TICKET AS total_venta
+				FROM gd_esquema.Maestra m
+				INNER JOIN ALBONDIGA.Sucursal s on s.nombre = m.SUCURSAL_NOMBRE
+				INNER JOIN ALBONDIGA.Caja c on c.numero = m.CAJA_NUMERO and c.id_sucursal = s.nro_de_sucursal
+				INNER JOIN ALBONDIGA.Empleado e on e.dni = m.EMPLEADO_DNI and e.mail = m.EMPLEADO_MAIL
+				INNER JOIN ALBONDIGA.Tipo_Comprobante tc on tc.tipo = m.TICKET_TIPO_COMPROBANTE
+				WHERE 
+				TICKET_NUMERO is not null and
+				TICKET_FECHA_HORA is not null and
+				TICKET_SUBTOTAL_PRODUCTOS is not null and
+				TICKET_TOTAL_DESCUENTO_APLICADO is not null and
+				TICKET_TOTAL_DESCUENTO_APLICADO_MP is not null and
+				TICKET_TOTAL_TICKET is not null --17 068
 END
 GO
+
+--select count(distinct TICKET_NUMERO) from gd_esquema.Maestra--17 025
+
+--select TICKET_NUMERO,* from gd_esquema.Maestra where TICKET_NUMERO = 1351388438
 
 CREATE PROCEDURE ALBONDIGA.migrar_Envio
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los envios...'
-    /* comportamiento del procedure */
+    			INSERT INTO envio (id_cliente,id_ticket,costo,fecha_programada,hora_inicio,hora_fin,fecha_y_hora_entrega,id_estado_envio)
+				SELECT DISTINCT
+				c.id_cliente AS id_cliente,
+				t.id_ticket AS id_ticket,
+				m.ENVIO_COSTO AS costo,
+				m.ENVIO_FECHA_PROGRAMADA AS fecha_programada,
+				m.ENVIO_HORA_INICIO AS hora_inicio,
+				m.ENVIO_HORA_FIN AS hora_fin,
+				m.ENVIO_FECHA_ENTREGA AS fecha_y_hora_entrega,
+				ee.id_estado_envio AS id_estado_envio
+				FROM gd_esquema.Maestra m
+				INNER JOIN ALBONDIGA.Cliente c on c.dni = m.CLIENTE_DNI and c.mail = m.CLIENTE_MAIL
+
+				INNER JOIN ALBONDIGA.Sucursal s on s.nombre = m.SUCURSAL_NOMBRE --pq lo necesito abajo
+				INNER JOIN ALBONDIGA.Ticket t on t.nro_de_ticket = m.TICKET_NUMERO and t.id_sucursal = s.nro_de_sucursal
+
+				INNER JOIN ALBONDIGA.Estado_Envio ee on ee.descripcion = m.ENVIO_ESTADO
+				WHERE 
+				ENVIO_COSTO is not null and
+				ENVIO_FECHA_PROGRAMADA is not null and
+				ENVIO_HORA_INICIO is not null and
+				ENVIO_HORA_FIN is not null and
+				ENVIO_FECHA_ENTREGA is not null
 END
 GO
+--select * from ALBONDIGA.Sucursal
+
+--select * from ALBONDIGA.Envio
+
+--select ENVIO_ESTADO,* from gd_esquema.Maestra where ENVIO_ESTADO is not null
 
 CREATE PROCEDURE ALBONDIGA.migrar_Pago
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los pagos...'
-    /* comportamiento del procedure */
+	    	INSERT INTO Pago(fecha_y_hora,id_ticket,id_medio_pago,id_detalle_pago,id_descuento_por_medio_pago,importe)
+				SELECT DISTINCT
+				m.PAGO_FECHA AS fecha_y_hora,
+				t.id_ticket AS id_ticket,
+				mp.id_medio_pago AS id_medio_pago,
+				dp.id_detalle_pago AS id_detalle_pago,
+				p.codigo AS id_descuento_por_medio_pago,
+				m.PAGO_IMPORTE AS importe
+				FROM gd_esquema.Maestra m
+				INNER JOIN ALBONDIGA.Sucursal s on s.nombre = m.SUCURSAL_NOMBRE --pq lo necesito abajo
+				INNER JOIN ALBONDIGA.Ticket t on t.nro_de_ticket = m.TICKET_NUMERO and t.id_sucursal = s.nro_de_sucursal
+				INNER JOIN ALBONDIGA.Medio_Pago mp on mp.medio_pago = m.PAGO_MEDIO_PAGO
+				INNER JOIN ALBONDIGA.Tarjeta ta on ta.nro_tarjeta = m.PAGO_TARJETA_NRO --pq lo necesito abajo
+				INNER JOIN ALBONDIGA.Detalle_Pago dp on dp.id_tarjeta = ta.id_tarjeta
+				INNER JOIN ALBONDIGA.Descuento_Por_Medio_Pago p on p.id_medio_pago = mp.id_medio_pago and p.descuento_porcentaje = m.DESCUENTO_PORCENTAJE_DESC
+				WHERE 
+				PAGO_FECHA is not null and
+				PAGO_IMPORTE is not null
 END
 GO
+
+--select * from ALBONDIGA.Detalle_Pago
+
+--select * from ALBONDIGA.Descuento_Por_Medio_Pago
 
 CREATE PROCEDURE ALBONDIGA.migrar_Promocion_x_Ticket
 AS
@@ -986,10 +1066,10 @@ EXEC ALBONDIGA.migrar_Sucursal;
 EXEC ALBONDIGA.migrar_Empleado;
 EXEC ALBONDIGA.migrar_Caja;
 EXEC ALBONDIGA.migrar_Detalle_Pago;
-
-/*
 EXEC ALBONDIGA.migrar_Ticket;
 EXEC ALBONDIGA.migrar_Envio;
+
+/*
 EXEC ALBONDIGA.migrar_Pago;
 EXEC ALBONDIGA.migrar_Promocion_x_Ticket;
 EXEC ALBONDIGA.migrar_Promocion_x_Producto;
