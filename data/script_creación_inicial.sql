@@ -420,7 +420,6 @@ CREATE TABLE ALBONDIGA.Pago (
 CREATE TABLE ALBONDIGA.Promocion_x_Ticket (
     id_promocion INT NOT NULL,
     id_ticket INT NOT NULL,
-	descuento_aplicado DECIMAL(18,2) NOT NULL,
 );
 
 CREATE TABLE ALBONDIGA.Promocion_x_Producto (
@@ -904,34 +903,31 @@ CREATE PROCEDURE ALBONDIGA.migrar_Ticket
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los tickets...'
-			INSERT INTO Ticket(
-				nro_de_ticket,id_sucursal, total_envio, fecha_y_hora,id_caja,id_empleado,id_tipo_de_comprobante,sub_total_ticket,total_promociones,total_descuento_medio_pago,total_venta
-				)
-				SELECT DISTINCT
-				m.TICKET_NUMERO AS nro_de_ticket,
-				s.nro_de_sucursal AS id_sucursal,
-				ISNULL(m.TICKET_TOTAL_ENVIO, 0) AS total_envio,
-				m.TICKET_FECHA_HORA AS fecha_y_hora,
-				c.id_caja AS id_caja,
-				e.legajo AS id_empleado,
-				tc.id_tipo_comprobante AS id_tipo_de_comprobante,
-				m.TICKET_SUBTOTAL_PRODUCTOS AS sub_total_ticket,
-				m.TICKET_TOTAL_DESCUENTO_APLICADO AS total_promociones,
-				m.TICKET_TOTAL_DESCUENTO_APLICADO_MP AS total_descuento_medio_pago,
-				m.TICKET_TOTAL_TICKET AS total_venta
+			INSERT INTO Ticket(nro_de_ticket,id_sucursal, total_envio, fecha_y_hora, id_caja, id_empleado, id_tipo_de_comprobante, sub_total_ticket, total_promociones, total_descuento_medio_pago, total_venta)
+				SELECT DISTINCT m.TICKET_NUMERO AS nro_de_ticket,
+								s.nro_de_sucursal AS id_sucursal,
+								ISNULL(m.TICKET_TOTAL_ENVIO, 0) AS total_envio,
+								m.TICKET_FECHA_HORA AS fecha_y_hora,
+								c.id_caja AS id_caja,
+								e.legajo AS id_empleado,
+								tc.id_tipo_comprobante AS id_tipo_de_comprobante,
+								m.TICKET_SUBTOTAL_PRODUCTOS AS sub_total_ticket,
+								m.TICKET_TOTAL_DESCUENTO_APLICADO AS total_promociones,
+								m.TICKET_TOTAL_DESCUENTO_APLICADO_MP AS total_descuento_medio_pago,
+								m.TICKET_TOTAL_TICKET AS total_venta
 				FROM gd_esquema.Maestra m
-				INNER JOIN ALBONDIGA.Sucursal s on s.nombre = m.SUCURSAL_NOMBRE
-				INNER JOIN ALBONDIGA.Caja c on c.numero = m.CAJA_NUMERO and c.id_sucursal = s.nro_de_sucursal
-				INNER JOIN ALBONDIGA.Empleado e on e.dni = m.EMPLEADO_DNI and e.mail = m.EMPLEADO_MAIL
-				INNER JOIN ALBONDIGA.Tipo_Comprobante tc on tc.tipo = m.TICKET_TIPO_COMPROBANTE
+				INNER JOIN ALBONDIGA.Sucursal s ON s.nombre = m.SUCURSAL_NOMBRE
+				INNER JOIN ALBONDIGA.Caja c ON c.numero = m.CAJA_NUMERO and c.id_sucursal = s.nro_de_sucursal
+				INNER JOIN ALBONDIGA.Empleado e ON e.dni = m.EMPLEADO_DNI and e.mail = m.EMPLEADO_MAIL
+				INNER JOIN ALBONDIGA.Tipo_Comprobante tc ON tc.tipo = m.TICKET_TIPO_COMPROBANTE
 				WHERE 
-				TICKET_NUMERO is not null and
-				TICKET_FECHA_HORA is not null and
-				TICKET_SUBTOTAL_PRODUCTOS is not null and
-				TICKET_TOTAL_DESCUENTO_APLICADO is not null and
-				TICKET_TOTAL_DESCUENTO_APLICADO_MP is not null and
-				TICKET_TOTAL_TICKET is not null and
-				TICKET_TOTAL_ENVIO is not null
+				TICKET_NUMERO IS NOT NULL AND
+				TICKET_FECHA_HORA IS NOT NULL AND
+				TICKET_SUBTOTAL_PRODUCTOS IS NOT NULL AND
+				TICKET_TOTAL_DESCUENTO_APLICADO IS NOT NULL AND
+				TICKET_TOTAL_DESCUENTO_APLICADO_MP IS NOT NULL AND
+				TICKET_TOTAL_TICKET IS NOT NULL AND
+				TICKET_TOTAL_ENVIO IS NOT NULL
 END
 GO
 
@@ -940,26 +936,25 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los envios...'
     			INSERT INTO envio (id_cliente,id_ticket,costo,fecha_programada,hora_inicio,hora_fin,fecha_y_hora_entrega,id_estado_envio)
-				SELECT DISTINCT
-				c.id_cliente AS id_cliente,
-				t.id_ticket AS id_ticket,
-				m.ENVIO_COSTO AS costo,
-				m.ENVIO_FECHA_PROGRAMADA AS fecha_programada,
-				m.ENVIO_HORA_INICIO AS hora_inicio,
-				m.ENVIO_HORA_FIN AS hora_fin,
-				m.ENVIO_FECHA_ENTREGA AS fecha_y_hora_entrega,
-				ee.id_estado_envio AS id_estado_envio
+				SELECT DISTINCT c.id_cliente AS id_cliente,
+								t.id_ticket AS id_ticket,
+								m.ENVIO_COSTO AS costo,
+								m.ENVIO_FECHA_PROGRAMADA AS fecha_programada,
+								m.ENVIO_HORA_INICIO AS hora_inicio,
+								m.ENVIO_HORA_FIN AS hora_fin,
+								m.ENVIO_FECHA_ENTREGA AS fecha_y_hora_entrega,
+								ee.id_estado_envio AS id_estado_envio
 				FROM gd_esquema.Maestra m
-				INNER JOIN ALBONDIGA.Cliente c on c.dni = m.CLIENTE_DNI and c.mail = m.CLIENTE_MAIL
-				INNER JOIN ALBONDIGA.Sucursal s on s.nombre = m.SUCURSAL_NOMBRE
-				INNER JOIN ALBONDIGA.Ticket t on t.nro_de_ticket = m.TICKET_NUMERO and t.id_sucursal = s.nro_de_sucursal
-				INNER JOIN ALBONDIGA.Estado_Envio ee on ee.descripcion = m.ENVIO_ESTADO
+				INNER JOIN ALBONDIGA.Cliente c ON c.dni = m.CLIENTE_DNI and c.mail = m.CLIENTE_MAIL
+				INNER JOIN ALBONDIGA.Sucursal s ON s.nombre = m.SUCURSAL_NOMBRE
+				INNER JOIN ALBONDIGA.Ticket t ON t.nro_de_ticket = m.TICKET_NUMERO and t.id_sucursal = s.nro_de_sucursal
+				INNER JOIN ALBONDIGA.Estado_Envio ee ON ee.descripcion = m.ENVIO_ESTADO
 				WHERE 
-				ENVIO_COSTO is not null and
-				ENVIO_FECHA_PROGRAMADA is not null and
-				ENVIO_HORA_INICIO is not null and
-				ENVIO_HORA_FIN is not null and
-				ENVIO_FECHA_ENTREGA is not null
+				ENVIO_COSTO IS NOT NULL AND
+				ENVIO_FECHA_PROGRAMADA IS NOT NULL AND
+				ENVIO_HORA_INICIO IS NOT NULL AND
+				ENVIO_HORA_FIN IS NOT NULL AND
+				ENVIO_FECHA_ENTREGA IS NOT NULL
 END
 GO
 
@@ -986,13 +981,11 @@ CREATE PROCEDURE ALBONDIGA.migrar_Promocion_x_Ticket
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las promociones por ticket...'
-    /*INSERT INTO Promocion_x_Ticket(id_promocion, nro_de_ticket)
-		SELECT p.id_promocion,
-			   t.id_ticket
+    INSERT INTO Promocion_x_Ticket(id_promocion, id_ticket)
+		SELECT DISTINCT (SELECT TOP 1 P.id_promocion FROM ALBONDIGA.Promocion P WHERE P.codigo = PROMO_CODIGO),
+						(SELECT TOP 1 T.id_ticket FROM ALBONDIGA.Ticket T WHERE T.nro_de_ticket = TICKET_NUMERO)
 		FROM gd_esquema.Maestra
-		INNER JOIN ALBONDIGA.Promocion p ON PROMO_CODIGO = p.codigo --AND p.fecha_inicio = PROMOCION_FECHA_INICIO AND p.fecha_fin = PROMOCION_FECHA_FIN
-		INNER JOIN ALBONDIGA.Ticket t ON t.nro_de_ticket = TICKET_NUMERO --AND t.fecha_y_hora = TICKET_FECHA_HORA
-		WHERE TICKET_NUMERO IS NOT NULL AND PROMO_CODIGO IS NOT NULL*/
+		WHERE TICKET_NUMERO IS NOT NULL AND PROMO_CODIGO IS NOT NULL
 END
 GO
 
@@ -1000,7 +993,12 @@ CREATE PROCEDURE ALBONDIGA.migrar_Promocion_x_Producto
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las promociones por producto...'
-    /* comportamiento del procedure */
+    INSERT INTO Promocion_x_Producto(id_promocion, id_producto, promo_aplicada_descuento)
+		SELECT DISTINCT (SELECT TOP 1 PR.id_promocion FROM ALBONDIGA.Promocion PR WHERE PR.codigo = PROMO_CODIGO),
+						(SELECT TOP 1 P.codigo FROM ALBONDIGA.Producto P WHERE P.nombre = PRODUCTO_NOMBRE),
+						PROMO_APLICADA_DESCUENTO
+		FROM gd_esquema.Maestra
+		WHERE TICKET_NUMERO IS NOT NULL AND PROMO_CODIGO IS NOT NULL AND PROMO_APLICADA_DESCUENTO <> 0
 END
 GO
 
@@ -1008,7 +1006,11 @@ CREATE PROCEDURE ALBONDIGA.migrar_Reglas_x_Promocion
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las reglas por promocion...'
-    /* comportamiento del procedure */
+    INSERT INTO Reglas_x_Promocion(id_regla, id_promocion)
+		SELECT DISTINCT (SELECT TOP 1 R.id_regla FROM ALBONDIGA.Regla R WHERE R.aplica_misma_marca = REGLA_APLICA_MISMA_MARCA AND R.aplica_misma_prod = REGLA_APLICA_MISMO_PROD AND R.descripcion = REGLA_DESCRIPCION),
+						(SELECT TOP 1 P.id_promocion FROM ALBONDIGA.Promocion P WHERE P.codigo = PROMO_CODIGO AND P.descripcion = PROMOCION_DESCRIPCION AND P.fecha_inicio = PROMOCION_FECHA_INICIO)
+		FROM gd_esquema.Maestra
+		WHERE PROMO_CODIGO IS NOT NULL AND REGLA_APLICA_MISMA_MARCA IS NOT NULL
 END
 GO
 
@@ -1024,12 +1026,15 @@ CREATE PROCEDURE ALBONDIGA.migrar_Categoria_x_Subcategoria
 AS
 BEGIN
     PRINT 'Se comienzan a migrar las categorias por subcategoria...'
-    /* comportamiento del procedure */
+    INSERT INTO Categoria_x_Subcategoria(id_categoria, id_subcategoria)
+		SELECT DISTINCT (SELECT TOP 1 C.id_categoria FROM ALBONDIGA.Categoria C WHERE C.nombre = PRODUCTO_CATEGORIA),
+						(SELECT TOP 1 SC.id_subcategoria FROM ALBONDIGA.Sub_Categoria SC WHERE SC.nombre = PRODUCTO_SUB_CATEGORIA)
+		FROM gd_esquema.Maestra
+		WHERE PRODUCTO_CATEGORIA IS NOT NULL AND PRODUCTO_SUB_CATEGORIA IS NOT NULL
 END
 GO
 
 --------------------------- Ejecutar stores procedures ---------------------------
-/*LOS QUE YA FUNCIONAN*/
 
 EXEC ALBONDIGA.migrar_Estado_Envio;
 EXEC ALBONDIGA.migrar_Provincia;
@@ -1055,11 +1060,11 @@ EXEC ALBONDIGA.migrar_Detalle_Pago;
 EXEC ALBONDIGA.migrar_Ticket;
 EXEC ALBONDIGA.migrar_Envio;
 EXEC ALBONDIGA.migrar_Pago;
+EXEC ALBONDIGA.migrar_Promocion_x_Ticket;
+EXEC ALBONDIGA.migrar_Categoria_x_Subcategoria;
+EXEC ALBONDIGA.migrar_Reglas_x_Promocion;
+EXEC ALBONDIGA.migrar_Promocion_x_Producto;
 
 /*
-EXEC ALBONDIGA.migrar_Promocion_x_Ticket;
-EXEC ALBONDIGA.migrar_Promocion_x_Producto;
-EXEC ALBONDIGA.migrar_Reglas_x_Promocion;
 EXEC ALBONDIGA.migrar_Producto_x_Ticket;
-EXEC ALBONDIGA.migrar_Categoria_x_Subcategoria;
 */
