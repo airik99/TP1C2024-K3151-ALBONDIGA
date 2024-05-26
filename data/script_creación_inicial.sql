@@ -848,24 +848,24 @@ BEGIN
     PRINT 'Se comienzan a migrar los empleados...'
 		INSERT INTO Empleado(id_sucursal,nombre,apellido,dni,fecha_registro,telefono,mail,fecha_de_nacimiento)
 			SELECT DISTINCT
-			s.nro_de_sucursal as id_sucursal,
-			m.EMPLEADO_NOMBRE as nombre,
-			m.EMPLEADO_APELLIDO as apellido,
-			m.EMPLEADO_DNI as dni,
-			m.EMPLEADO_FECHA_REGISTRO as fecha_registro,
-			m.EMPLEADO_TELEFONO as telefono,
-			m.EMPLEADO_MAIL as mail,
-			m.EMPLEADO_FECHA_NACIMIENTO as fecha_de_nacimiento
+			s.nro_de_sucursal AS id_sucursal,
+			m.EMPLEADO_NOMBRE AS nombre,
+			m.EMPLEADO_APELLIDO AS apellido,
+			m.EMPLEADO_DNI AS dni,
+			m.EMPLEADO_FECHA_REGISTRO AS fecha_registro,
+			m.EMPLEADO_TELEFONO AS telefono,
+			m.EMPLEADO_MAIL AS mail,
+			m.EMPLEADO_FECHA_NACIMIENTO AS fecha_de_nacimiento
 			FROM gd_esquema.Maestra m
-			INNER JOIN Sucursal s on s.nombre = m.SUCURSAL_NOMBRE
+			INNER JOIN Sucursal s ON s.nombre = m.SUCURSAL_NOMBRE
 			WHERE 
-			EMPLEADO_NOMBRE is not null and 
-			EMPLEADO_APELLIDO is not null and 
-			EMPLEADO_DNI is not null and 
-			EMPLEADO_FECHA_REGISTRO is not null and
-			EMPLEADO_TELEFONO is not null and
-			EMPLEADO_MAIL is not null and
-			EMPLEADO_FECHA_NACIMIENTO is not null
+			EMPLEADO_NOMBRE IS NOT NULL AND 
+			EMPLEADO_APELLIDO IS NOT NULL AND 
+			EMPLEADO_DNI IS NOT NULL AND 
+			EMPLEADO_FECHA_REGISTRO IS NOT NULL AND
+			EMPLEADO_TELEFONO IS NOT NULL AND
+			EMPLEADO_MAIL IS NOT NULL AND
+			EMPLEADO_FECHA_NACIMIENTO IS NOT NULL
 END
 GO
 
@@ -890,10 +890,10 @@ BEGIN
     PRINT 'Se comienzan a migrar los detalles de pago...'
 		INSERT INTO Detalle_Pago(id_tarjeta,cuotas)
 			SELECT DISTINCT
-			t.id_tarjeta as id_tarjeta,
+			t.id_tarjeta AS id_tarjeta,
 			m.PAGO_TARJETA_CUOTAS
 			FROM gd_esquema.Maestra m
-			INNER JOIN Tarjeta t on t.nro_tarjeta = m.PAGO_TARJETA_NRO
+			INNER JOIN Tarjeta t ON t.nro_tarjeta = m.PAGO_TARJETA_NRO
 			WHERE m.PAGO_TARJETA_CUOTAS is not null
 
 END
