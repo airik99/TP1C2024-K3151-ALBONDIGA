@@ -982,23 +982,45 @@ BEGIN
 				m.PAGO_FECHA AS fecha_y_hora,
 				t.id_ticket AS id_ticket,
 				mp.id_medio_pago AS id_medio_pago,
-				dp.id_detalle_pago AS id_detalle_pago,
-				p.codigo AS id_descuento_por_medio_pago,
+				--'dp.id_detalle_pago' AS id_detalle_pago,
+				--'p.codigo' AS id_descuento_por_medio_pago,
 				m.PAGO_IMPORTE AS importe
 				FROM gd_esquema.Maestra m
 				INNER JOIN ALBONDIGA.Sucursal s on s.nombre = m.SUCURSAL_NOMBRE --pq lo necesito abajo
 				INNER JOIN ALBONDIGA.Ticket t on t.nro_de_ticket = m.TICKET_NUMERO and t.id_sucursal = s.nro_de_sucursal
 				INNER JOIN ALBONDIGA.Medio_Pago mp on mp.medio_pago = m.PAGO_MEDIO_PAGO
-				INNER JOIN ALBONDIGA.Tarjeta ta on ta.nro_tarjeta = m.PAGO_TARJETA_NRO --pq lo necesito abajo
-				INNER JOIN ALBONDIGA.Detalle_Pago dp on dp.id_tarjeta = ta.id_tarjeta
-				INNER JOIN ALBONDIGA.Descuento_Por_Medio_Pago p on p.id_medio_pago = mp.id_medio_pago and p.descuento_porcentaje = m.DESCUENTO_PORCENTAJE_DESC
+				--INNER JOIN ALBONDIGA.Tarjeta ta on ta.nro_tarjeta = m.PAGO_TARJETA_NRO --pq lo necesito abajo
+				--INNER JOIN ALBONDIGA.Detalle_Pago dp on dp.id_tarjeta = ta.id_tarjeta
+				--INNER JOIN ALBONDIGA.Descuento_Por_Medio_Pago p on p.id_medio_pago = mp.id_medio_pago and p.fecha_fin = m.DESCUENTO_FECHA_FIN--and p.descuento_porcentaje = m.DESCUENTO_PORCENTAJE_DESC
 				WHERE 
 				PAGO_FECHA is not null and
-				PAGO_IMPORTE is not null
+				PAGO_IMPORTE is not null and
+				DESCUENTO_FECHA_FIN is not null
+
 END
 GO
 
+-- 1352673365	Sucursal N°:40000 2veces
+-- 1353429485	Sucursal N°:70000 2veces
+
+select TICKET_NUMERO, SUCURSAL_NOMBRE, PAGO_MEDIO_PAGO, count(*) from gd_esquema.Maestra
+where PAGO_MEDIO_PAGO is not null
+group by TICKET_NUMERO, SUCURSAL_NOMBRE, PAGO_MEDIO_PAGO
+having count(*) > 1
+
+select * from gd_esquema.Maestra
+where TICKET_NUMERO = 1352673365 --and PAGO_MEDIO_PAGO is not null
+
+select PAGO_MEDIO_PAGO from gd_esquema.Maestra
+where PAGO_MEDIO_PAGO is not null
+
 --select * from ALBONDIGA.Detalle_Pago
+
+select --PAGO_DESCUENTO_APLICADO,PAGO_FECHA,PAGO_IMPORTE,PAGO_MEDIO_PAGO,PAGO_TARJETA_CUOTAS,PAGO_TARJETA_FECHA_VENC,PAGO_TARJETA_NRO,PAGO_TIPO_MEDIO_PAGO,
+/*DESCUENTO_CODIGO,DESCUENTO_PORCENTAJE_DESC,*/distinct TICKET_NUMERO, SUCURSAL_NOMBRE
+from gd_esquema.Maestra
+where PAGO_DESCUENTO_APLICADO is not null and PAGO_TARJETA_CUOTAS is null and (PAGO_MEDIO_PAGO = 'Efectivo' or PAGO_MEDIO_PAGO = 'Billetera virtual')
+group by TICKET_NUMERO, SUCURSAL_NOMBRE
 
 --select * from ALBONDIGA.Descuento_Por_Medio_Pago
 
