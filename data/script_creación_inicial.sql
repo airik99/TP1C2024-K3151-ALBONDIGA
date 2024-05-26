@@ -384,6 +384,7 @@ CREATE TABLE ALBONDIGA.Ticket (
 	id_ticket INT IDENTITY(1,1) PRIMARY KEY, 
     nro_de_ticket INT NOT NULL,
     id_sucursal INT NOT NULL,
+	total_envio DECIMAL(18,2) NOT NULL,
     fecha_y_hora DATETIME NOT NULL,
     id_caja INT NOT NULL,
     id_empleado INT NOT NULL,
@@ -904,11 +905,12 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los tickets...'
 			INSERT INTO Ticket(
-				nro_de_ticket,id_sucursal,fecha_y_hora,id_caja,id_empleado,id_tipo_de_comprobante,sub_total_ticket,total_promociones,total_descuento_medio_pago,total_venta
+				nro_de_ticket,id_sucursal, total_envio, fecha_y_hora,id_caja,id_empleado,id_tipo_de_comprobante,sub_total_ticket,total_promociones,total_descuento_medio_pago,total_venta
 				)
 				SELECT DISTINCT
 				m.TICKET_NUMERO AS nro_de_ticket,
 				s.nro_de_sucursal AS id_sucursal,
+				ISNULL(m.TICKET_TOTAL_ENVIO, 0) AS total_envio,
 				m.TICKET_FECHA_HORA AS fecha_y_hora,
 				c.id_caja AS id_caja,
 				e.legajo AS id_empleado,
@@ -928,7 +930,8 @@ BEGIN
 				TICKET_SUBTOTAL_PRODUCTOS is not null and
 				TICKET_TOTAL_DESCUENTO_APLICADO is not null and
 				TICKET_TOTAL_DESCUENTO_APLICADO_MP is not null and
-				TICKET_TOTAL_TICKET is not null
+				TICKET_TOTAL_TICKET is not null and
+				TICKET_TOTAL_ENVIO is not null
 END
 GO
 
