@@ -846,7 +846,7 @@ CREATE PROCEDURE ALBONDIGA.migrar_Empleado
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los empleados...'
-		INSERT INTO Empleado(id_sucursal,nombre,apellido,dni,fecha_registro,telefono,mail,fecha_de_nacimiento)
+		INSERT INTO Empleado(id_sucursal, nombre, apellido, dni, fecha_registro, telefono, mail, fecha_de_nacimiento)
 			SELECT DISTINCT
 			s.nro_de_sucursal AS id_sucursal,
 			m.EMPLEADO_NOMBRE AS nombre,
@@ -888,14 +888,13 @@ CREATE PROCEDURE ALBONDIGA.migrar_Detalle_Pago
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los detalles de pago...'
-		INSERT INTO Detalle_Pago(id_tarjeta,cuotas)
+		INSERT INTO Detalle_Pago(id_tarjeta, cuotas)
 			SELECT DISTINCT
 			t.id_tarjeta AS id_tarjeta,
 			m.PAGO_TARJETA_CUOTAS
 			FROM gd_esquema.Maestra m
 			INNER JOIN Tarjeta t ON t.nro_tarjeta = m.PAGO_TARJETA_NRO
-			WHERE m.PAGO_TARJETA_CUOTAS is not null
-
+			WHERE m.PAGO_TARJETA_CUOTAS IS NOT NULL
 END
 GO
 
