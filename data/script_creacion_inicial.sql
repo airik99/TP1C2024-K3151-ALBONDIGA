@@ -342,7 +342,6 @@ CREATE TABLE ALBONDIGA.Supermercado (
 
 CREATE TABLE ALBONDIGA.Tarjeta (
     id_tarjeta INT IDENTITY(1,1) PRIMARY KEY,
-    -- id_cliente INT NOT NULL, EN LA TABLA MAESTRA SON TODOS NULLS LOS CLIENTES, LAS TARJETAS NO ESTAN LIGADOS A LOS CLIENTES
     nro_tarjeta NVARCHAR(255) NOT NULL,
     fecha_vencimiento DATETIME NOT NULL
 );
@@ -367,7 +366,7 @@ CREATE TABLE ALBONDIGA.Empleado (
 );
 
 CREATE TABLE ALBONDIGA.Caja (
-	id_caja INT IDENTITY(1,1) PRIMARY KEY, -- numero no puede ser PK porque hay un mismo numero de caja en distintas sucursales, cambiarlo en el der
+	id_caja INT IDENTITY(1,1) PRIMARY KEY,
     numero INT NOT NULL,
     id_sucursal INT NOT NULL,
     id_tipo_caja INT NOT NULL
@@ -375,7 +374,6 @@ CREATE TABLE ALBONDIGA.Caja (
 
 CREATE TABLE ALBONDIGA.Detalle_Pago (
     id_detalle_pago INT IDENTITY(1,1) PRIMARY KEY,
-    --id_cliente INT NOT NULL,
     id_tarjeta INT NOT NULL,
     cuotas DECIMAL(18,0) NOT NULL
 );
@@ -437,7 +435,8 @@ CREATE TABLE ALBONDIGA.Producto_x_Ticket (
     id_producto INT NOT NULL,
     id_ticket INT NOT NULL,
     cantidad DECIMAL(18,0) NOT NULL,
-    total_por_producto DECIMAL(18,2) NOT NULL
+	precio_producto DECIMAL(18,2) NOT NULL, -- TICKET_DET_PRECIO
+    total_por_producto DECIMAL(18,2) NOT NULL -- TICKET_DET_TOTAL
 );
 
 CREATE TABLE ALBONDIGA.Categoria_x_Subcategoria (
@@ -469,10 +468,6 @@ FOREIGN KEY (id_localidad) REFERENCES ALBONDIGA.Localidad(id_localidad);
 ALTER TABLE ALBONDIGA.Cliente
 ADD CONSTRAINT FK_Cliente_Domicilio
 FOREIGN KEY (id_domicilio) REFERENCES ALBONDIGA.Domicilio(id_domicilio);
-/*
-ALTER TABLE ALBONDIGA.Tarjeta
-ADD CONSTRAINT FK_Tarjeta_Cliente
-FOREIGN KEY (id_cliente) REFERENCES ALBONDIGA.Cliente(id_cliente);*/
 
 ALTER TABLE ALBONDIGA.Sucursal
 ADD CONSTRAINT FK_Sucursal_Supermercado
@@ -493,10 +488,6 @@ FOREIGN KEY (id_sucursal) REFERENCES ALBONDIGA.Sucursal(nro_de_sucursal);
 ALTER TABLE ALBONDIGA.Caja
 ADD CONSTRAINT FK_Caja_Tipo_Caja
 FOREIGN KEY (id_tipo_caja) REFERENCES ALBONDIGA.Tipo_Caja(id_tipo_caja);
-
-/*ALTER TABLE ALBONDIGA.Detalle_Pago
-ADD CONSTRAINT FK_Detalle_Pago_Cliente
-FOREIGN KEY (id_cliente) REFERENCES ALBONDIGA.Cliente(id_cliente);*/
 
 ALTER TABLE ALBONDIGA.Detalle_Pago
 ADD CONSTRAINT FK_Detalle_Pago_Tarjeta
@@ -593,7 +584,7 @@ CREATE PROCEDURE ALBONDIGA.migrar_Estado_Envio
   BEGIN
 	PRINT 'Se comienzan a migrar los estados de envio...'
     INSERT INTO Estado_Envio(descripcion)
-		SELECT DISTINCT Maestra.ENVIO_ESTADO AS descripcion FROM gd_esquema.Maestra WHERE ENVIO_ESTADO IS NOT NULL
+		SELECT DISTINCT Maestra.ENVIO_ESTADO FROM gd_esquema.Maestra WHERE ENVIO_ESTADO IS NOT NULL
   END
 GO
 
@@ -602,9 +593,9 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar las provincias...'
     INSERT INTO Provincia(nombre)
-		SELECT DISTINCT CLIENTE_PROVINCIA AS nombre FROM gd_esquema.Maestra WHERE CLIENTE_PROVINCIA IS NOT NULL
-		SELECT DISTINCT SUCURSAL_PROVINCIA AS nombre FROM gd_esquema.Maestra WHERE SUCURSAL_PROVINCIA IS NOT NULL
-        SELECT DISTINCT SUPER_PROVINCIA AS nombre FROM gd_esquema.Maestra WHERE SUPER_PROVINCIA IS NOT NULL
+		SELECT DISTINCT CLIENTE_PROVINCIA FROM gd_esquema.Maestra WHERE CLIENTE_PROVINCIA IS NOT NULL
+		SELECT DISTINCT SUCURSAL_PROVINCIA FROM gd_esquema.Maestra WHERE SUCURSAL_PROVINCIA IS NOT NULL
+        SELECT DISTINCT SUPER_PROVINCIA FROM gd_esquema.Maestra WHERE SUPER_PROVINCIA IS NOT NULL
 END
 GO
 
@@ -613,7 +604,7 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los tipos de medio de pago...'
     INSERT INTO Tipo_Medio_Pago(tipo_pago)
-		SELECT DISTINCT PAGO_TIPO_MEDIO_PAGO AS tipo_pago FROM gd_esquema.Maestra WHERE PAGO_TIPO_MEDIO_PAGO IS NOT NULL
+		SELECT DISTINCT PAGO_TIPO_MEDIO_PAGO FROM gd_esquema.Maestra WHERE PAGO_TIPO_MEDIO_PAGO IS NOT NULL
 END
 GO
 
@@ -622,7 +613,7 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los tipos de comprobante...'
     INSERT INTO Tipo_Comprobante(tipo)
-		SELECT DISTINCT TICKET_TIPO_COMPROBANTE AS tipo from gd_esquema.Maestra WHERE TICKET_TIPO_COMPROBANTE IS NOT NULL
+		SELECT DISTINCT TICKET_TIPO_COMPROBANTE from gd_esquema.Maestra WHERE TICKET_TIPO_COMPROBANTE IS NOT NULL
 END
 GO
 
@@ -631,10 +622,10 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar las promociones...'
     INSERT INTO Promocion(codigo, descripcion, fecha_inicio, fecha_fin)
-		SELECT DISTINCT PROMO_CODIGO AS codigo, 
-						PROMOCION_DESCRIPCION AS descripcion,
-						PROMOCION_FECHA_INICIO AS fecha_inicio,
-						PROMOCION_FECHA_INICIO AS fecha_fin
+		SELECT DISTINCT PROMO_CODIGO, 
+						PROMOCION_DESCRIPCION,
+						PROMOCION_FECHA_INICIO,
+						PROMOCION_FECHA_INICIO
 		from gd_esquema.Maestra WHERE PROMO_CODIGO IS NOT NULL
 END
 GO
@@ -644,13 +635,13 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar las reglas...'
     INSERT INTO Regla(aplica_misma_marca, aplica_misma_prod, cant_aplicable_descuento, cant_aplicable_regla, cant_maxima_producto, descripcion, descuento_aplicar_porcentaje)
-		SELECT DISTINCT REGLA_APLICA_MISMA_MARCA AS aplica_misma_marca,
-						REGLA_APLICA_MISMO_PROD AS aplica_misma_prod,
-						REGLA_CANT_APLICA_DESCUENTO AS cant_aplicable_descuento,
-						REGLA_CANT_APLICABLE_REGLA AS cant_aplicable_regla,
-						REGLA_CANT_MAX_PROD AS cant_maxima_producto,
-						REGLA_DESCRIPCION AS descripcion,
-						REGLA_DESCUENTO_APLICABLE_PROD AS descuento_aplicar_porcentaje
+		SELECT DISTINCT REGLA_APLICA_MISMA_MARCA,
+						REGLA_APLICA_MISMO_PROD,
+						REGLA_CANT_APLICA_DESCUENTO,
+						REGLA_CANT_APLICABLE_REGLA,
+						REGLA_CANT_MAX_PROD,
+						REGLA_DESCRIPCION,
+						REGLA_DESCUENTO_APLICABLE_PROD
 		FROM gd_esquema.Maestra 
 		WHERE REGLA_APLICA_MISMA_MARCA IS NOT NULL AND REGLA_APLICA_MISMO_PROD IS NOT NULL AND REGLA_CANT_APLICA_DESCUENTO IS NOT NULL
 		AND REGLA_CANT_MAX_PROD IS NOT NULL AND REGLA_DESCRIPCION IS NOT NULL AND REGLA_DESCUENTO_APLICABLE_PROD IS NOT NULL
@@ -662,7 +653,7 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar las categorias...'
     INSERT INTO Categoria(nombre)
-		SELECT DISTINCT PRODUCTO_CATEGORIA AS nombre FROM gd_esquema.Maestra WHERE PRODUCTO_CATEGORIA IS NOT NULL
+		SELECT DISTINCT PRODUCTO_CATEGORIA FROM gd_esquema.Maestra WHERE PRODUCTO_CATEGORIA IS NOT NULL
 END
 GO
 
@@ -671,7 +662,7 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar las subcategorias...'
     INSERT INTO Sub_Categoria(nombre)
-		SELECT DISTINCT PRODUCTO_SUB_CATEGORIA AS nombre FROM gd_esquema.Maestra WHERE PRODUCTO_SUB_CATEGORIA IS NOT NULL
+		SELECT DISTINCT PRODUCTO_SUB_CATEGORIA FROM gd_esquema.Maestra WHERE PRODUCTO_SUB_CATEGORIA IS NOT NULL
 END
 GO
 
@@ -680,7 +671,7 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los tipos de caja...'
     INSERT INTO Tipo_Caja(tipo_caja)
-		SELECT DISTINCT CAJA_TIPO AS tipo FROM gd_esquema.Maestra WHERE CAJA_TIPO IS NOT NULL
+		SELECT DISTINCT CAJA_TIPO FROM gd_esquema.Maestra WHERE CAJA_TIPO IS NOT NULL
 END
 GO
 
@@ -689,15 +680,15 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar las localidades...'
     INSERT INTO Localidad(nombre, id_provincia)
-		SELECT DISTINCT CLIENTE_LOCALIDAD AS nombre, P1.id_provincia FROM gd_esquema.Maestra
+		SELECT DISTINCT CLIENTE_LOCALIDAD, P1.id_provincia FROM gd_esquema.Maestra
 		INNER JOIN Provincia P1 ON P1.nombre = CLIENTE_PROVINCIA 
 		WHERE CLIENTE_LOCALIDAD IS NOT NULL
 		UNION
-		SELECT DISTINCT SUCURSAL_LOCALIDAD AS nombre, P2.id_provincia FROM gd_esquema.Maestra
+		SELECT DISTINCT SUCURSAL_LOCALIDAD, P2.id_provincia FROM gd_esquema.Maestra
 		INNER JOIN Provincia P2 ON P2.nombre = SUCURSAL_PROVINCIA
 		WHERE SUCURSAL_LOCALIDAD IS NOT NULL
 		UNION
-		SELECT DISTINCT SUPER_LOCALIDAD AS nombre, P3.id_provincia FROM gd_esquema.Maestra
+		SELECT DISTINCT SUPER_LOCALIDAD, P3.id_provincia FROM gd_esquema.Maestra
 		INNER JOIN Provincia P3 ON P3.nombre = SUPER_PROVINCIA
 		WHERE SUPER_LOCALIDAD IS NOT NULL
 END
@@ -708,11 +699,11 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los productos...'
     INSERT INTO Producto(nombre, precio_unitario, marca, descripcion, id_subcategoria)
-		SELECT DISTINCT PRODUCTO_NOMBRE AS nombre, -- REVISAR ESTO DESPUES, EN LA MAESTRA NO HAY NINGUN CODIGO, SOLO EST� EL NOMBRE
-						PRODUCTO_PRECIO AS precio_unitario,
-						PRODUCTO_MARCA AS marca,
-						PRODUCTO_DESCRIPCION AS descripcion,
-						SC.id_subcategoria AS id_subcategoria
+		SELECT DISTINCT PRODUCTO_NOMBRE, -- REVISAR ESTO DESPUES, EN LA MAESTRA NO HAY NINGUN CODIGO, SOLO EST� EL NOMBRE
+						PRODUCTO_PRECIO,
+						PRODUCTO_MARCA,
+						PRODUCTO_DESCRIPCION,
+						SC.id_subcategoria
 		FROM gd_esquema.Maestra
 		INNER JOIN Sub_Categoria SC ON SC.nombre = PRODUCTO_SUB_CATEGORIA
 		WHERE PRODUCTO_NOMBRE IS NOT NULL AND PRODUCTO_MARCA IS NOT NULL AND PRODUCTO_PRECIO IS NOT NULL AND PRODUCTO_DESCRIPCION IS NOT NULL
@@ -724,7 +715,7 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los medios de pago...'
     INSERT INTO Medio_Pago(medio_pago, id_tipo_medio_pago)
-		SELECT DISTINCT PAGO_MEDIO_PAGO AS medio_pago, T.id_tipo_medio_pago
+		SELECT DISTINCT PAGO_MEDIO_PAGO, T.id_tipo_medio_pago
 		FROM gd_esquema.Maestra
 		INNER JOIN Tipo_Medio_Pago T ON T.tipo_pago = PAGO_TIPO_MEDIO_PAGO
 		WHERE PAGO_MEDIO_PAGO IS NOT NULL
@@ -736,14 +727,14 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los descuentos por medio de pago...'
     INSERT INTO Descuento_Por_Medio_Pago(codigo, id_medio_pago, descripcion, fecha_inicio, fecha_fin, tope, descuento_porcentaje,total_descuento_aplicado)
-		SELECT DISTINCT DESCUENTO_CODIGO AS codigo,
-				T.id_tipo_medio_pago AS id_medio_pago,
-				DESCUENTO_DESCRIPCION AS descripcion,
-				DESCUENTO_FECHA_INICIO AS fecha_inicio,
-				DESCUENTO_FECHA_FIN AS fecha_fin,
-				DESCUENTO_TOPE AS tope,
-				DESCUENTO_PORCENTAJE_DESC AS descuento_porcentaje,
-				PAGO_DESCUENTO_APLICADO AS total_descuento_aplicado
+		SELECT DISTINCT DESCUENTO_CODIGO,
+				T.id_tipo_medio_pago,
+				DESCUENTO_DESCRIPCION,
+				DESCUENTO_FECHA_INICIO,
+				DESCUENTO_FECHA_FIN,
+				DESCUENTO_TOPE,
+				DESCUENTO_PORCENTAJE_DESC,
+				PAGO_DESCUENTO_APLICADO
 		FROM gd_esquema.Maestra
 		INNER JOIN Tipo_Medio_Pago T ON T.tipo_pago = PAGO_TIPO_MEDIO_PAGO
 		WHERE DESCUENTO_CODIGO IS NOT NULL
@@ -779,14 +770,14 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los clientes...'
     INSERT INTO Cliente(nombre, apellido, dni, fecha_registro, telefono, mail, fecha_nacimiento, id_domicilio)
-		SELECT DISTINCT CLIENTE_NOMBRE AS nombre,
-						CLIENTE_APELLIDO AS apellido,
-						CLIENTE_DNI AS dni,
-						CLIENTE_FECHA_REGISTRO AS fecha_registro,
-						CLIENTE_TELEFONO AS telefono,
-						CLIENTE_MAIL AS mail,
-						CLIENTE_FECHA_NACIMIENTO AS fecha_nacimiento,
-						D.id_domicilio AS id_domicilio 
+		SELECT DISTINCT CLIENTE_NOMBRE,
+						CLIENTE_APELLIDO,
+						CLIENTE_DNI,
+						CLIENTE_FECHA_REGISTRO,
+						CLIENTE_TELEFONO,
+						CLIENTE_MAIL,
+						CLIENTE_FECHA_NACIMIENTO,
+						D.id_domicilio 
 		FROM gd_esquema.Maestra
 		INNER JOIN Domicilio D ON D.calle_y_numero = CLIENTE_DOMICILIO
 		INNER JOIN Localidad L ON L.nombre = CLIENTE_LOCALIDAD AND L.id_localidad = D.id_localidad
@@ -800,13 +791,13 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los supermercados...'
     INSERT INTO Supermercado(nombre, razon_social, cuit, ingresos_brutos, id_domicilio, fecha_inicio_actividad, condicion_fiscal)
-		SELECT DISTINCT SUPER_NOMBRE AS nombre,
-						SUPER_RAZON_SOC AS razon_social,
-						SUPER_CUIT AS cuit,
-						SUPER_IIBB AS ingresos_brutos,
-						D.id_domicilio AS id_domicilio,
-						SUPER_FECHA_INI_ACTIVIDAD AS fecha_inicio_actividad,
-						SUPER_CONDICION_FISCAL AS condicion_fiscal 
+		SELECT DISTINCT SUPER_NOMBRE,
+						SUPER_RAZON_SOC,
+						SUPER_CUIT,
+						SUPER_IIBB,
+						D.id_domicilio,
+						SUPER_FECHA_INI_ACTIVIDAD,
+						SUPER_CONDICION_FISCAL
 		FROM gd_esquema.Maestra
 		INNER JOIN Domicilio D ON D.calle_y_numero = SUPER_DOMICILIO
 		INNER JOIN Localidad L ON L.nombre = SUPER_LOCALIDAD AND L.id_localidad = D.id_localidad
@@ -821,8 +812,8 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar las tarjetas...'
 	INSERT INTO Tarjeta(nro_tarjeta, fecha_vencimiento)
-		SELECT DISTINCT PAGO_TARJETA_NRO AS nro_tarjeta,
-						PAGO_TARJETA_FECHA_VENC AS fecha_vencimiento 
+		SELECT DISTINCT PAGO_TARJETA_NRO,
+						PAGO_TARJETA_FECHA_VENC
 	FROM gd_esquema.Maestra
 	WHERE PAGO_TARJETA_NRO IS NOT NULL AND PAGO_TARJETA_FECHA_VENC IS NOT NULL
 END
@@ -833,9 +824,9 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar las sucursales...'
 	INSERT INTO Sucursal(nombre, id_supermercado, id_direccion)
-		SELECT DISTINCT SUCURSAL_NOMBRE AS nombre,
-						S.id_supermercado AS id_supermercado,
-						D.id_domicilio AS id_direccion
+		SELECT DISTINCT SUCURSAL_NOMBRE,
+						S.id_supermercado,
+						D.id_domicilio
 		FROM gd_esquema.Maestra
 		INNER JOIN Supermercado S ON S.nombre = SUPER_NOMBRE AND S.cuit = SUPER_CUIT
 		INNER JOIN Domicilio D ON D.calle_y_numero = SUCURSAL_DIRECCION
@@ -849,14 +840,14 @@ BEGIN
     PRINT 'Se comienzan a migrar los empleados...'
 		INSERT INTO Empleado(id_sucursal, nombre, apellido, dni, fecha_registro, telefono, mail, fecha_de_nacimiento)
 			SELECT DISTINCT
-			s.nro_de_sucursal AS id_sucursal,
-			m.EMPLEADO_NOMBRE AS nombre,
-			m.EMPLEADO_APELLIDO AS apellido,
-			m.EMPLEADO_DNI AS dni,
-			m.EMPLEADO_FECHA_REGISTRO AS fecha_registro,
-			m.EMPLEADO_TELEFONO AS telefono,
-			m.EMPLEADO_MAIL AS mail,
-			m.EMPLEADO_FECHA_NACIMIENTO AS fecha_de_nacimiento
+			s.nro_de_sucursal,
+			m.EMPLEADO_NOMBRE,
+			m.EMPLEADO_APELLIDO,
+			m.EMPLEADO_DNI,
+			m.EMPLEADO_FECHA_REGISTRO,
+			m.EMPLEADO_TELEFONO,
+			m.EMPLEADO_MAIL,
+			m.EMPLEADO_FECHA_NACIMIENTO
 			FROM gd_esquema.Maestra m
 			INNER JOIN Sucursal s ON s.nombre = m.SUCURSAL_NOMBRE
 			WHERE 
@@ -875,9 +866,9 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar las cajas...'
 	INSERT INTO Caja(numero, id_sucursal, id_tipo_caja)
-		SELECT DISTINCT CAJA_NUMERO AS numero,
-						S.nro_de_sucursal AS id_sucursal,
-						T.id_tipo_caja AS id_tipo_caja
+		SELECT DISTINCT CAJA_NUMERO,
+						S.nro_de_sucursal,
+						T.id_tipo_caja
 		FROM gd_esquema.Maestra
 		INNER JOIN Sucursal S ON S.nombre = SUCURSAL_NOMBRE
 		INNER JOIN Tipo_Caja T ON T.tipo_caja = CAJA_TIPO
@@ -890,9 +881,8 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los detalles de pago...'
 		INSERT INTO Detalle_Pago(id_tarjeta, cuotas)
-			SELECT DISTINCT
-			t.id_tarjeta AS id_tarjeta,
-			m.PAGO_TARJETA_CUOTAS
+			SELECT DISTINCT t.id_tarjeta,
+							m.PAGO_TARJETA_CUOTAS
 			FROM gd_esquema.Maestra m
 			INNER JOIN Tarjeta t ON t.nro_tarjeta = m.PAGO_TARJETA_NRO
 			WHERE m.PAGO_TARJETA_CUOTAS IS NOT NULL
@@ -904,17 +894,17 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los tickets...'
 			INSERT INTO Ticket(nro_de_ticket,id_sucursal, total_envio, fecha_y_hora, id_caja, id_empleado, id_tipo_de_comprobante, sub_total_ticket, total_promociones, total_descuento_medio_pago, total_venta)
-				SELECT DISTINCT m.TICKET_NUMERO AS nro_de_ticket,
-								s.nro_de_sucursal AS id_sucursal,
-								ISNULL(m.TICKET_TOTAL_ENVIO, 0) AS total_envio,
-								m.TICKET_FECHA_HORA AS fecha_y_hora,
-								c.id_caja AS id_caja,
-								e.legajo AS id_empleado,
-								tc.id_tipo_comprobante AS id_tipo_de_comprobante,
-								m.TICKET_SUBTOTAL_PRODUCTOS AS sub_total_ticket,
-								m.TICKET_TOTAL_DESCUENTO_APLICADO AS total_promociones,
-								m.TICKET_TOTAL_DESCUENTO_APLICADO_MP AS total_descuento_medio_pago,
-								m.TICKET_TOTAL_TICKET AS total_venta
+				SELECT DISTINCT m.TICKET_NUMERO,
+								s.nro_de_sucursal,
+								ISNULL(m.TICKET_TOTAL_ENVIO, 0),
+								m.TICKET_FECHA_HORA,
+								c.id_caja,
+								e.legajo,
+								tc.id_tipo_comprobante,
+								m.TICKET_SUBTOTAL_PRODUCTOS,
+								m.TICKET_TOTAL_DESCUENTO_APLICADO,
+								m.TICKET_TOTAL_DESCUENTO_APLICADO_MP,
+								m.TICKET_TOTAL_TICKET
 				FROM gd_esquema.Maestra m
 				INNER JOIN ALBONDIGA.Sucursal s ON s.nombre = m.SUCURSAL_NOMBRE
 				INNER JOIN ALBONDIGA.Caja c ON c.numero = m.CAJA_NUMERO and c.id_sucursal = s.nro_de_sucursal
@@ -936,14 +926,14 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los envios...'
     			INSERT INTO envio (id_cliente,id_ticket,costo,fecha_programada,hora_inicio,hora_fin,fecha_y_hora_entrega,id_estado_envio)
-				SELECT DISTINCT c.id_cliente AS id_cliente,
-								t.id_ticket AS id_ticket,
-								m.ENVIO_COSTO AS costo,
-								m.ENVIO_FECHA_PROGRAMADA AS fecha_programada,
-								m.ENVIO_HORA_INICIO AS hora_inicio,
-								m.ENVIO_HORA_FIN AS hora_fin,
-								m.ENVIO_FECHA_ENTREGA AS fecha_y_hora_entrega,
-								ee.id_estado_envio AS id_estado_envio
+				SELECT DISTINCT c.id_cliente,
+								t.id_ticket,
+								m.ENVIO_COSTO,
+								m.ENVIO_FECHA_PROGRAMADA,
+								m.ENVIO_HORA_INICIO,
+								m.ENVIO_HORA_FIN,
+								m.ENVIO_FECHA_ENTREGA,
+								ee.id_estado_envio
 				FROM gd_esquema.Maestra m
 				INNER JOIN ALBONDIGA.Cliente c ON c.dni = m.CLIENTE_DNI and c.mail = m.CLIENTE_MAIL
 				INNER JOIN ALBONDIGA.Sucursal s ON s.nombre = m.SUCURSAL_NOMBRE
@@ -965,13 +955,13 @@ BEGIN
 	    	INSERT INTO Pago(fecha_y_hora, importe, id_ticket, id_medio_pago, id_detalle_pago, id_descuento_medio_pago)
 				SELECT DISTINCT PAGO_FECHA,
 								PAGO_IMPORTE,
-								(SELECT TOP 1 T.id_ticket FROM ALBONDIGA.Ticket T WHERE T.nro_de_ticket = TICKET_NUMERO) AS id_ticket,
-								(SELECT TOP 1 M.id_medio_pago FROM ALBONDIGA.Medio_Pago M WHERE M.medio_pago = PAGO_MEDIO_PAGO) AS id_medio_pago,
+								(SELECT TOP 1 T.id_ticket FROM ALBONDIGA.Ticket T WHERE T.nro_de_ticket = TICKET_NUMERO),
+								(SELECT TOP 1 M.id_medio_pago FROM ALBONDIGA.Medio_Pago M WHERE M.medio_pago = PAGO_MEDIO_PAGO),
 								(SELECT TOP 1 DP.id_detalle_pago FROM ALBONDIGA.Detalle_Pago DP INNER JOIN ALBONDIGA.Tarjeta T 
-								ON T.id_tarjeta = DP.id_tarjeta WHERE T.nro_tarjeta = PAGO_TARJETA_NRO) AS id_detalle_pago,
+								ON T.id_tarjeta = DP.id_tarjeta WHERE T.nro_tarjeta = PAGO_TARJETA_NRO),
 								(SELECT TOP 1 DMP.id_descuento_medio_pago FROM ALBONDIGA.Descuento_Por_Medio_Pago DMP 
 								WHERE DMP.codigo = DESCUENTO_CODIGO AND DMP.fecha_inicio = DESCUENTO_FECHA_INICIO 
-								AND DMP.fecha_fin = DESCUENTO_FECHA_FIN AND DMP.descuento_porcentaje = DESCUENTO_PORCENTAJE_DESC) AS id_descuento_por_medio_pago
+								AND DMP.fecha_fin = DESCUENTO_FECHA_FIN AND DMP.descuento_porcentaje = DESCUENTO_PORCENTAJE_DESC)
 				FROM gd_esquema.Maestra
 				WHERE PAGO_FECHA IS NOT NULL AND PAGO_IMPORTE IS NOT NULL AND TICKET_NUMERO IS NOT NULL
 END
@@ -998,7 +988,7 @@ BEGIN
 						(SELECT TOP 1 P.codigo FROM ALBONDIGA.Producto P WHERE P.nombre = PRODUCTO_NOMBRE),
 						PROMO_APLICADA_DESCUENTO
 		FROM gd_esquema.Maestra
-		WHERE TICKET_NUMERO IS NOT NULL AND PROMO_CODIGO IS NOT NULL AND PROMO_APLICADA_DESCUENTO <> 0
+		WHERE PRODUCTO_NOMBRE IS NOT NULL AND PROMO_CODIGO IS NOT NULL AND PROMO_APLICADA_DESCUENTO <> 0
 END
 GO
 
@@ -1018,7 +1008,15 @@ CREATE PROCEDURE ALBONDIGA.migrar_Producto_x_Ticket
 AS
 BEGIN
     PRINT 'Se comienzan a migrar los productos por ticket...'
-    /* comportamiento del procedure */
+    INSERT INTO Producto_x_Ticket(id_ticket, id_producto,  cantidad, precio_producto, total_por_producto)
+		SELECT DISTINCT (SELECT TOP 1 T.id_ticket FROM ALBONDIGA.Ticket T WHERE T.nro_de_ticket = TICKET_NUMERO),
+						(SELECT TOP 1 P.codigo FROM ALBONDIGA.Producto P WHERE P.nombre = PRODUCTO_NOMBRE AND P.descripcion = PRODUCTO_DESCRIPCION),
+						TICKET_DET_CANTIDAD,
+						TICKET_DET_PRECIO,
+						TICKET_DET_TOTAL
+		FROM gd_esquema.Maestra
+		WHERE PRODUCTO_NOMBRE IS NOT NULL AND PRODUCTO_DESCRIPCION IS NOT NULL AND TICKET_NUMERO IS NOT NULL AND TICKET_DET_CANTIDAD IS NOT NULL 
+		AND TICKET_DET_PRECIO IS NOT NULL AND TICKET_DET_TOTAL IS NOT NULL
 END
 GO
 
@@ -1035,7 +1033,6 @@ END
 GO
 
 --------------------------- Ejecutar stores procedures ---------------------------
-
 EXEC ALBONDIGA.migrar_Estado_Envio;
 EXEC ALBONDIGA.migrar_Provincia;
 EXEC ALBONDIGA.migrar_Tipo_Medio_Pago;
@@ -1060,11 +1057,8 @@ EXEC ALBONDIGA.migrar_Detalle_Pago;
 EXEC ALBONDIGA.migrar_Ticket;
 EXEC ALBONDIGA.migrar_Envio;
 EXEC ALBONDIGA.migrar_Pago;
-EXEC ALBONDIGA.migrar_Promocion_x_Ticket;
 EXEC ALBONDIGA.migrar_Categoria_x_Subcategoria;
+EXEC ALBONDIGA.migrar_Promocion_x_Producto; -- (94348 rows affected) TRAE MUCHAS PORQUE NOS TRAEMOS LA CANTIDAD DE DINERO QUE SE DESCONTÓ, SI NO FUERA POR ESO TRAERIA MENOS
 EXEC ALBONDIGA.migrar_Reglas_x_Promocion;
-EXEC ALBONDIGA.migrar_Promocion_x_Producto;
-
-/*
-EXEC ALBONDIGA.migrar_Producto_x_Ticket;
-*/
+EXEC ALBONDIGA.migrar_Promocion_x_Ticket;
+EXEC ALBONDIGA.migrar_Producto_x_Ticket; -- (273176 rows affected) OK, IDEM PROMOCION X PRODUCTO
