@@ -207,11 +207,6 @@ IF EXISTS(SELECT [name] FROM sys.procedures WHERE [name] = 'migrar_Categoria_x_S
     DROP PROCEDURE ALBONDIGA.migrar_Categoria_x_Subcategoria;
 GO
 
---------------------------- Limpiar Funciones ---------------------------
-/*IF EXISTS(SELECT [name] FROM sys.objects WHERE [name] = 'obtenerFechaReciente')
-	DROP FUNCTION MargeCreoQueOdioGDD.obtenerFechaReciente
-GO*/
-
 --------------------------- Limpiar Schema ---------------------------
 IF EXISTS (SELECT name FROM sys.schemas WHERE name = 'ALBONDIGA')
 BEGIN
@@ -285,7 +280,7 @@ CREATE TABLE ALBONDIGA.Localidad (
 );
 
 CREATE TABLE ALBONDIGA.Producto (
-    codigo INT IDENTITY(1,1) PRIMARY KEY, --INT PRIMARY KEY NOT NULL, NO FIGURA NINGUN CODIGO DE PRODUCTO QUE PODAMOS USAR COMO PK
+    codigo INT IDENTITY(1,1) PRIMARY KEY,
     nombre NVARCHAR(255) NOT NULL,
     precio_unitario DECIMAL(18,2) NOT NULL,
     marca NVARCHAR(255) NOT NULL,
@@ -435,8 +430,8 @@ CREATE TABLE ALBONDIGA.Producto_x_Ticket (
     id_producto INT NOT NULL,
     id_ticket INT NOT NULL,
     cantidad DECIMAL(18,0) NOT NULL,
-	precio_producto DECIMAL(18,2) NOT NULL, -- TICKET_DET_PRECIO
-    total_por_producto DECIMAL(18,2) NOT NULL -- TICKET_DET_TOTAL
+	precio_producto DECIMAL(18,2) NOT NULL,
+    total_por_producto DECIMAL(18,2) NOT NULL
 );
 
 CREATE TABLE ALBONDIGA.Categoria_x_Subcategoria (
@@ -699,7 +694,7 @@ AS
 BEGIN
     PRINT 'Se comienzan a migrar los productos...'
     INSERT INTO Producto(nombre, precio_unitario, marca, descripcion, id_subcategoria)
-		SELECT DISTINCT PRODUCTO_NOMBRE, -- REVISAR ESTO DESPUES, EN LA MAESTRA NO HAY NINGUN CODIGO, SOLO EST� EL NOMBRE
+		SELECT DISTINCT PRODUCTO_NOMBRE,
 						PRODUCTO_PRECIO,
 						PRODUCTO_MARCA,
 						PRODUCTO_DESCRIPCION,
@@ -1058,7 +1053,7 @@ EXEC ALBONDIGA.migrar_Ticket;
 EXEC ALBONDIGA.migrar_Envio;
 EXEC ALBONDIGA.migrar_Pago;
 EXEC ALBONDIGA.migrar_Categoria_x_Subcategoria;
-EXEC ALBONDIGA.migrar_Promocion_x_Producto; -- (94348 rows affected) TRAE MUCHAS PORQUE NOS TRAEMOS LA CANTIDAD DE DINERO QUE SE DESCONTÓ, SI NO FUERA POR ESO TRAERIA MENOS
+EXEC ALBONDIGA.migrar_Promocion_x_Producto;
 EXEC ALBONDIGA.migrar_Reglas_x_Promocion;
 EXEC ALBONDIGA.migrar_Promocion_x_Ticket;
-EXEC ALBONDIGA.migrar_Producto_x_Ticket; -- (273176 rows affected) OK, IDEM PROMOCION X PRODUCTO
+EXEC ALBONDIGA.migrar_Producto_x_Ticket;
