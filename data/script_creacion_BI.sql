@@ -17,16 +17,16 @@ DROP FUNCTION ALBONDIGA.rangoEtario;
 
 /* --------------------------------------------- Limpiar tablas --------------------------------------------- */
 IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Pago')
-DROP TABLE ALBONDIGA.BI_Pago; 
+DROP TABLE ALBONDIGA.BI_Pago;
+
+IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Producto')
+DROP TABLE ALBONDIGA.BI_Producto;
 
 IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Ticket')
 DROP TABLE ALBONDIGA.BI_Ticket;
 
 IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Envio')
 DROP TABLE ALBONDIGA.BI_Envio;
-
-IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Producto')
-DROP TABLE ALBONDIGA.BI_Producto;
 
 IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Subcategoria')
 DROP TABLE ALBONDIGA.BI_Subcategoria;
@@ -46,8 +46,11 @@ DROP TABLE ALBONDIGA.BI_Rango_Etario;
 IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Sucursal')
 DROP TABLE ALBONDIGA.BI_Sucursal;
 
-IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Ubicacion')
-DROP TABLE ALBONDIGA.BI_Ubicacion;
+IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Localidad')
+DROP TABLE ALBONDIGA.BI_Localidad;
+
+IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Provincia')
+DROP TABLE ALBONDIGA.BI_Provincia;
 
 IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Tiempo')
 DROP TABLE ALBONDIGA.BI_Tiempo;
@@ -147,9 +150,14 @@ CREATE TABLE ALBONDIGA.BI_Tiempo (
     mes INT
 );
 
-CREATE TABLE ALBONDIGA.BI_Ubicacion (
-    id_ubicacion INT IDENTITY(1,1) PRIMARY KEY,
+CREATE TABLE ALBONDIGA.BI_Provincia (
+    id_provincia INT IDENTITY(1,1) PRIMARY KEY,
     provincia NVARCHAR(100),
+);
+
+CREATE TABLE ALBONDIGA.BI_Localidad (
+    id_localidad INT IDENTITY(1,1) PRIMARY KEY,
+    id_provincia INT,
     localidad NVARCHAR(100)
 );
 
@@ -187,7 +195,7 @@ CREATE TABLE ALBONDIGA.BI_SubCategoria (
 CREATE TABLE ALBONDIGA.BI_Ticket (
     id_ticket INT PRIMARY KEY,
     id_tiempo INT,
-    id_ubicacion INT,
+    id_localidad INT,
     id_sucursal INT,
     id_rango_etario_empleado INT,
     id_turno INT,
@@ -224,14 +232,19 @@ CREATE TABLE ALBONDIGA.BI_Pago (
 
 /* --------------------------------------------- Alter Tables --------------------------------------------- */
 
+-- Foreign keys para BI_Localidad
+ALTER TABLE ALBONDIGA.BI_Localidad
+ADD CONSTRAINT FK_BI_Localidad_Provincia
+FOREIGN KEY (id_provincia) REFERENCES ALBONDIGA.BI_Provincia(id_provincia)
+
 -- Foreign keys para BI_Ticket
 ALTER TABLE ALBONDIGA.BI_Ticket
 ADD CONSTRAINT FK_BI_Ticket_Tiempo
 FOREIGN KEY (id_tiempo) REFERENCES ALBONDIGA.BI_Tiempo(id_tiempo);
 
 ALTER TABLE ALBONDIGA.BI_Ticket
-ADD CONSTRAINT FK_BI_Ticket_Ubicacion
-FOREIGN KEY (id_ubicacion) REFERENCES ALBONDIGA.BI_Ubicacion(id_ubicacion);
+ADD CONSTRAINT FK_BI_Ticket_Localidad
+FOREIGN KEY (id_localidad) REFERENCES ALBONDIGA.BI_Localidad(id_localidad);
 
 ALTER TABLE ALBONDIGA.BI_Ticket
 ADD CONSTRAINT FK_BI_Ticket_Sucursal
