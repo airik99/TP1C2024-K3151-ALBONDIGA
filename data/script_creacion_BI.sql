@@ -309,12 +309,57 @@ BEGIN
 END
 GO
 
-
 /* --------------------------------------------- Creacion de vistas --------------------------------------------- */
+CREATE VIEW ALBONDIGA.V_TicketPromedioMensual AS
+SELECT 1/* hacer */;
+GO
+
+CREATE VIEW ALBONDIGA.V_CantidadUnidadesPromedio AS
+SELECT 1/* hacer */;
+GO
+
+CREATE VIEW ALBONDIGA.V_VentasRangoEtarioAnual AS
+SELECT 1/* hacer */;
+GO
+
+CREATE VIEW ALBONDIGA.V_VentasTurnoLocalidad AS
+SELECT 1/* hacer */;
+GO
+
+CREATE VIEW ALBONDIGA.V_PorcentajeDescuentoMensual AS
+SELECT 1/* hacer */;
+GO
+
+CREATE VIEW ALBONDIGA.V_Top3CategoriasDescuento AS
+SELECT 1/* hacer */;
+GO
+
+CREATE VIEW ALBONDIGA.V_CumplimientoEnvios AS
+SELECT 1/* hacer */;
+GO
+
+CREATE VIEW ALBONDIGA.V_EnviosRangoEtarioClientes AS
+SELECT 1/* hacer */;
+GO
+
+CREATE VIEW ALBONDIGA.V_Top5LocalidadesCostoEnvio AS
+SELECT 1/* hacer */;
+GO
+
+CREATE VIEW ALBONDIGA.V_Top3SucursalesPagosCuotas AS
+SELECT 1/* hacer */;
+GO
+
+CREATE VIEW ALBONDIGA.V_PromedioCuotaRangoEtario AS
+SELECT 1/* hacer */;
+GO
+
+CREATE VIEW ALBONDIGA.V_PorcentajeDescuentoMedioPago AS
+SELECT 1/* hacer */;
+GO
 
 
 /* --------------------------------------------- Ejecución de la migración --------------------------------------------- */
---EXEC ALBONDIGA.migrar_BI_Sucursal
+EXEC ALBONDIGA.migrar_BI_Sucursal
 
---select * from ALBONDIGA.BI_Sucursal
 /* --------------------------------------------- Ejecución de las vistas --------------------------------------------- */
