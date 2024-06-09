@@ -16,11 +16,11 @@ IF EXISTS(SELECT [name] FROM sys.objects WHERE [name] = 'rangoEtario')
 DROP FUNCTION ALBONDIGA.rangoEtario;
 
 /* --------------------------------------------- Limpiar tablas --------------------------------------------- */
+IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Pago')
+DROP TABLE ALBONDIGA.BI_Pago; 
+
 IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Ticket')
 DROP TABLE ALBONDIGA.BI_Ticket;
-
-IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Pago')
-DROP TABLE ALBONDIGA.BI_Pago;
 
 IF EXISTS(SELECT [name] FROM sys.tables WHERE [name] = 'BI_Envio')
 DROP TABLE ALBONDIGA.BI_Envio;
@@ -91,8 +91,8 @@ IF EXISTS (SELECT [name] FROM sys.views WHERE [name] = 'V_PorcentajeDescuentoMed
 
 /* --------------------------------------------- Limpiar procedures --------------------------------------------- */
 
-IF EXISTS(SELECT [name] FROM sys.procedures WHERE [name] = 'migrar_BI_provincia')
-	DROP PROCEDURE ALBONDIGA.migrar_BI_provincia
+IF EXISTS(SELECT [name] FROM sys.procedures WHERE [name] = 'migrar_BI_Sucursal')
+	DROP PROCEDURE ALBONDIGA.migrar_BI_Sucursal
 GO
 
 /* --------------------------------------------- Creacion de funciones --------------------------------------------- */
@@ -155,7 +155,7 @@ CREATE TABLE ALBONDIGA.BI_Ubicacion (
 
 CREATE TABLE ALBONDIGA.BI_Sucursal (
     id_sucursal INT PRIMARY KEY,
-    nombre_sucursal NVARCHAR(100)
+    nombre NVARCHAR(100)
 );
 
 CREATE TABLE ALBONDIGA.BI_Rango_Etario (
@@ -226,63 +226,82 @@ CREATE TABLE ALBONDIGA.BI_Pago (
 
 -- Foreign keys para BI_Ticket
 ALTER TABLE ALBONDIGA.BI_Ticket
-ADD CONSTRAINT FK_Ticket_Tiempo
+ADD CONSTRAINT FK_BI_Ticket_Tiempo
 FOREIGN KEY (id_tiempo) REFERENCES ALBONDIGA.BI_Tiempo(id_tiempo);
 
 ALTER TABLE ALBONDIGA.BI_Ticket
-ADD CONSTRAINT FK_Ticket_Ubicacion
+ADD CONSTRAINT FK_BI_Ticket_Ubicacion
 FOREIGN KEY (id_ubicacion) REFERENCES ALBONDIGA.BI_Ubicacion(id_ubicacion);
 
 ALTER TABLE ALBONDIGA.BI_Ticket
-ADD CONSTRAINT FK_Ticket_Sucursal
+ADD CONSTRAINT FK_BI_Ticket_Sucursal
 FOREIGN KEY (id_sucursal) REFERENCES ALBONDIGA.BI_Sucursal(id_sucursal);
 
 ALTER TABLE ALBONDIGA.BI_Ticket
-ADD CONSTRAINT FK_Ticket_RangoEtarioEmpleado
+ADD CONSTRAINT FK_BI_Ticket_RangoEtarioEmpleado
 FOREIGN KEY (id_rango_etario_empleado) REFERENCES ALBONDIGA.BI_Rango_Etario(id_rango_etario);
 
 ALTER TABLE ALBONDIGA.BI_Ticket
-ADD CONSTRAINT FK_Ticket_Turno
+ADD CONSTRAINT FK_BI_Ticket_Turno
 FOREIGN KEY (id_turno) REFERENCES ALBONDIGA.BI_Turnos(id_turno);
 
 -- Foreign keys para BI_Producto
 ALTER TABLE ALBONDIGA.BI_Producto
-ADD CONSTRAINT FK_Producto_Ticket
+ADD CONSTRAINT FK_BI_Producto_Ticket
 FOREIGN KEY (id_ticket) REFERENCES ALBONDIGA.BI_Ticket(id_ticket);
 
 ALTER TABLE ALBONDIGA.BI_Producto
-ADD CONSTRAINT FK_Producto_Categoria
+ADD CONSTRAINT FK_BI_Producto_Categoria
 FOREIGN KEY (id_categoria) REFERENCES ALBONDIGA.BI_Categoria(id_categoria);
 
 ALTER TABLE ALBONDIGA.BI_Producto
-ADD CONSTRAINT FK_Producto_Subcategoria
+ADD CONSTRAINT FK_BI_Producto_Subcategoria
 FOREIGN KEY (id_subcategoria) REFERENCES ALBONDIGA.BI_SubCategoria(id_subcategoria);
 
 -- Foreign keys para BI_Envio
 ALTER TABLE ALBONDIGA.BI_Envio
-ADD CONSTRAINT FK_Envio_Cliente
+ADD CONSTRAINT FK_BI_Envio_Cliente
 FOREIGN KEY (id_cliente) REFERENCES ALBONDIGA.Cliente(id_cliente);
 
 ALTER TABLE ALBONDIGA.BI_Envio
-ADD CONSTRAINT FK_Envio_Sucursal
+ADD CONSTRAINT FK_BI_Envio_Sucursal
 FOREIGN KEY (id_sucursal) REFERENCES ALBONDIGA.BI_Sucursal(id_sucursal);
 
 ALTER TABLE ALBONDIGA.BI_Envio
-ADD CONSTRAINT FK_Envio_Tiempo
+ADD CONSTRAINT FK_BI_Envio_Tiempo
 FOREIGN KEY (id_tiempo) REFERENCES ALBONDIGA.BI_Tiempo(id_tiempo);
 
 -- Foreign keys para BI_Pago
 ALTER TABLE ALBONDIGA.BI_Pago
-ADD CONSTRAINT FK_Pago_Ticket
+ADD CONSTRAINT FK_BI_Pago_Ticket
 FOREIGN KEY (id_ticket) REFERENCES ALBONDIGA.BI_Ticket(id_ticket);
 
 ALTER TABLE ALBONDIGA.BI_Pago
-ADD CONSTRAINT FK_Pago_MedioPago
+ADD CONSTRAINT FK_BI_Pago_MedioPago
 FOREIGN KEY (id_medio_pago) REFERENCES ALBONDIGA.BI_Medio_Pago(id_medio_pago);
 
 ALTER TABLE ALBONDIGA.BI_Pago
-ADD CONSTRAINT FK_Pago_Tiempo
+ADD CONSTRAINT FK_BI_Pago_Tiempo
 FOREIGN KEY (id_tiempo) REFERENCES ALBONDIGA.BI_Tiempo(id_tiempo);
 GO
 
 /* -------- Creacion de procedures para cargar todas las tablas utilizando los datos ya migrados al modelo de datos transaccional -------- */
+CREATE PROCEDURE ALBONDIGA.migrar_BI_Sucursal
+AS
+BEGIN
+    PRINT 'Migrando datos a la dimensión Sucursal...'
+    INSERT INTO BI_Sucursal (id_sucursal, nombre)
+    SELECT DISTINCT nro_de_sucursal, nombre
+    FROM ALBONDIGA.Sucursal;
+END
+GO
+
+
+/* --------------------------------------------- Creacion de vistas --------------------------------------------- */
+
+
+/* --------------------------------------------- Ejecución de la migración --------------------------------------------- */
+--EXEC ALBONDIGA.migrar_BI_Sucursal
+
+--select * from ALBONDIGA.BI_Sucursal
+/* --------------------------------------------- Ejecución de las vistas --------------------------------------------- */
