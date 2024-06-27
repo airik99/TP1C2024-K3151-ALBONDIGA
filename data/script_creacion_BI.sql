@@ -736,7 +736,6 @@ JOIN ALBONDIGA.BI_Ticket AS TI ON T.id_tiempo = TI.id_tiempo
 GROUP BY T.año, T.mes;
 GO
 
-<<<<<<< HEAD
 -- 6.Las tres categorías de productos con mayor descuento aplicado a partir de promociones para cada cuatrimestre de cada año.
 CREATE VIEW ALBONDIGA.V_Top3CategoriasDescuento AS
 WITH DescuentosPorCategoria AS (
@@ -766,23 +765,6 @@ SELECT
 FROM Top3Categorias
 WHERE renglon <= 3;
 GO
-=======
--- Cantidad de envíos por rango etario de clientes para cada cuatrimestre de cada año.
-/*CREATE VIEW ALBONDIGA.V_EnviosRangoEtarioClientes AS
-SELECT DISTINCT 
-    COUNT(*) AS cantidad_envios,
-	R.descripcion_rango as rango_etario,
-	TI.cuatrimestre as cuatrimestre,
-	TI.año as año
-FROM ALBONDIGA.BI_Ticket T
-JOIN ALBONDIGA.BI_Tiempo TI ON TI.id_tiempo = T.id_tiempo
-JOIN ALBONDIGA.BI_Pago P ON P.id_ticket = T.id_ticket
-JOIN ALBONDIGA.BI_Rango_Etario R ON P.id_rango_etario_cliente = R.id_rango_etario
-JOIN ALBONDIGA.BI_Envio E ON Ti.id_tiempo = E.id_tiempo
-GROUP BY R.descripcion_rango, TI.cuatrimestre, TI.año
-ORDER BY cuatrimestre
-GO				ANDA MAL	*/
->>>>>>> 2df6f6c7cdfeb78b48fe7aa2eca97b5ef7ec780e
 
 -- 7.Porcentaje de cumplimiento de envíos en los tiempos programados por sucursal por año/mes (desvío)
 CREATE VIEW ALBONDIGA.V_CumplimientoEnvios AS
