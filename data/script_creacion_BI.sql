@@ -554,7 +554,7 @@ BEGIN
 					T.total_venta
     FROM ALBONDIGA.Ticket T
     JOIN ALBONDIGA.Sucursal S ON S.nro_de_sucursal = T.id_sucursal
-	JOIN ALBONDIGA.Domicilio D ON S.id_direccion = D.id_domicilio
+	JOIN ALBONDIGA.Domicilio D ON S.id_direccion = D.id_localidad --id_localidad POR id_domicilio
     JOIN ALBONDIGA.Empleado E ON T.id_empleado = E.legajo
 	JOIN ALBONDIGA.BI_Rango_Etario R ON R.descripcion_rango = ALBONDIGA.rangoEtario(ALBONDIGA.edadActual(E.fecha_de_nacimiento))
 	JOIN ALBONDIGA.BI_Turnos TU ON TU.descripcion_turno = ALBONDIGA.rangoHorario(ALBONDIGA.obtenerHora(T.fecha_y_hora))
@@ -658,8 +658,19 @@ GO*/
 
 -- Cantidad de envíos por rango etario de clientes para cada cuatrimestre de cada año.
 /*CREATE VIEW ALBONDIGA.V_EnviosRangoEtarioClientes AS
-SELECT 1 from ALBONDIGA.BI_Categoria
-GO*/
+SELECT DISTINCT 
+    COUNT(*) AS cantidad_envios,
+	R.descripcion_rango as rango_etario,
+	TI.cuatrimestre as cuatrimestre,
+	TI.año as año
+FROM ALBONDIGA.BI_Ticket T
+JOIN ALBONDIGA.BI_Tiempo TI ON TI.id_tiempo = T.id_tiempo
+JOIN ALBONDIGA.BI_Pago P ON P.id_ticket = T.id_ticket
+JOIN ALBONDIGA.BI_Rango_Etario R ON P.id_rango_etario_cliente = R.id_rango_etario
+JOIN ALBONDIGA.BI_Envio E ON Ti.id_tiempo = E.id_tiempo
+GROUP BY R.descripcion_rango, TI.cuatrimestre, TI.año
+ORDER BY cuatrimestre
+GO				ANDA MAL	*/
 
 -- Las 5 localidades (tomando la localidad del cliente) con mayor costo de envío.
 /*CREATE VIEW ALBONDIGA.V_Top5LocalidadesCostoEnvio AS
