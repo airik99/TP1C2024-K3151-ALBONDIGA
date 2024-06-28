@@ -286,7 +286,6 @@ CREATE TABLE ALBONDIGA.BI_Categoria_x_Subcategoria (
 	id_subcategoria INT
 );
 
--- Crear tablas de hechos
 CREATE TABLE ALBONDIGA.BI_Ticket (
     id_ticket INT PRIMARY KEY,
     id_tiempo INT,
@@ -302,10 +301,8 @@ CREATE TABLE ALBONDIGA.BI_Ticket (
 
 CREATE TABLE ALBONDIGA.BI_Producto (
     id_producto INT PRIMARY KEY,
-   -- id_categoria INT,
     id_subcategoria INT,
     precio_unitario DECIMAL(18, 2)
-    --descuento DECIMAL(18, 2)
 );
 
 CREATE TABLE ALBONDIGA.BI_Envio (
