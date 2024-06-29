@@ -599,7 +599,7 @@ BEGIN
 					T.total_venta
     FROM ALBONDIGA.Ticket T
     JOIN ALBONDIGA.Sucursal S ON S.nro_de_sucursal = T.id_sucursal
-	JOIN ALBONDIGA.Domicilio D ON S.id_direccion = D.id_localidad 
+	JOIN ALBONDIGA.Domicilio D ON S.id_direccion = D.id_domicilio
     JOIN ALBONDIGA.Empleado E ON T.id_empleado = E.legajo
 	JOIN ALBONDIGA.BI_Rango_Etario R ON R.descripcion_rango = ALBONDIGA.rangoEtario(ALBONDIGA.edadActual(E.fecha_de_nacimiento))
 	JOIN ALBONDIGA.BI_Turnos TU ON TU.descripcion_turno = ALBONDIGA.rangoHorario(ALBONDIGA.obtenerHora(T.fecha_y_hora))
