@@ -581,27 +581,29 @@ CREATE PROCEDURE ALBONDIGA.migrar_BI_Hechos_Ticket
 AS
 BEGIN
     PRINT 'Migrando datos a la tabla de hechos Ticket...'
-    INSERT INTO BI_Hechos_Ticket(id_tiempo, id_localidad, id_rango_etario_empleado, id_turno, id_tipo_caja, total_promociones, cantidad_productos, cantidad_ventas, total_descuento_medio_pago, total_venta)
-    SELECT DISTINCT TI.id_tiempo, 
-					D.id_localidad, 
-					R.id_rango_etario,
-					TU.id_turno,
-					TC.id_tipo_caja,
-					T.total_promociones,
-					123, --cantidad productos,
-					123, -- cantidad ventas
-					T.total_descuento_medio_pago,
-					T.total_venta
+    INSERT INTO BI_Hechos_Ticket(id_tiempo, id_localidad, id_rango_etario_empleado, id_turno, id_tipo_caja, total_promociones, cantidad_productos, cantidad_ventas, total_descuento_medio_pago, 
+								total_venta)
+    SELECT TI.id_tiempo, 
+			D.id_localidad, 
+			R.id_rango_etario,
+			TU.id_turno,
+			TC.id_tipo_caja,
+			SUM(T.total_promociones),
+			SUM(PX.cantidad),  -- Sumatoria de cantidad de productos
+			COUNT(DISTINCT T.id_ticket),  -- Cantidad de tickets (ventas)
+			SUM(T.total_descuento_medio_pago),
+			SUM(T.total_venta)
     FROM ALBONDIGA.Ticket T
     JOIN ALBONDIGA.Sucursal S ON S.nro_de_sucursal = T.id_sucursal
-	JOIN ALBONDIGA.Domicilio D ON S.id_direccion = D.id_domicilio
+    JOIN ALBONDIGA.Domicilio D ON S.id_direccion = D.id_domicilio
     JOIN ALBONDIGA.Empleado E ON T.id_empleado = E.legajo
-	JOIN ALBONDIGA.BI_Dimension_Rango_Etario R ON R.descripcion_rango = ALBONDIGA.rangoEtario(ALBONDIGA.edadActual(E.fecha_de_nacimiento))
-	JOIN ALBONDIGA.BI_Dimension_Turnos TU ON TU.descripcion_turno = ALBONDIGA.rangoHorario(ALBONDIGA.obtenerHora(T.fecha_y_hora))
-	JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON TI.año = YEAR(T.fecha_y_hora) AND TI.cuatrimestre = ALBONDIGA.obtenerCuatrimestre(T.fecha_y_hora) AND TI.mes = MONTH(T.fecha_y_hora)
-	JOIN ALBONDIGA.Caja C ON C.id_caja = T.id_caja
-	JOIN ALBONDIGA.BI_Dimension_Tipo_Caja TC ON TC.id_tipo_caja = C.id_tipo_caja
-	order by 1 asc
+    JOIN ALBONDIGA.BI_Dimension_Rango_Etario R ON R.descripcion_rango = ALBONDIGA.rangoEtario(ALBONDIGA.edadActual(E.fecha_de_nacimiento))
+    JOIN ALBONDIGA.BI_Dimension_Turnos TU ON TU.descripcion_turno = ALBONDIGA.rangoHorario(ALBONDIGA.obtenerHora(T.fecha_y_hora))
+    JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON TI.año = YEAR(T.fecha_y_hora) AND TI.cuatrimestre = ALBONDIGA.obtenerCuatrimestre(T.fecha_y_hora) AND TI.mes = MONTH(T.fecha_y_hora)
+    JOIN ALBONDIGA.Caja C ON C.id_caja = T.id_caja
+    JOIN ALBONDIGA.BI_Dimension_Tipo_Caja TC ON TC.id_tipo_caja = C.id_tipo_caja
+    JOIN ALBONDIGA.producto_x_ticket PX ON T.id_ticket = PX.id_ticket
+	GROUP BY TI.id_tiempo, D.id_localidad, R.id_rango_etario, TU.id_turno, TC.id_tipo_caja
 END
 GO
 
@@ -659,48 +661,48 @@ END
 GO
 
 /* --------------------------------------------- Creacion de vistas --------------------------------------------- */
-/*
+
 --1.Ticket Promedio mensual. Valor promedio de las ventas (en $) según la localidad, año y mes. Se calcula en función de la sumatoria del importe de las ventas sobre el total de las mismas.
 CREATE VIEW ALBONDIGA.V_TicketPromedioMensual AS
-SELECT 
-    TI.año,
-	TI.mes,
-    L.localidad,
-    '$'+CAST(AVG(T.total_venta) AS VARCHAR) AS total_ventas
-FROM ALBONDIGA.BI_Hechos_Ticket T
-JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON TI.id_tiempo = T.id_tiempo
-JOIN ALBONDIGA.BI_Dimension_Localidad L ON T.id_localidad = L.id_localidad
-GROUP BY TI.año, TI.mes, L.localidad
+SELECT L.localidad,
+		T.año,
+		T.mes,
+		'$' + CAST(CAST((SUM(HT.total_venta) / SUM(cantidad_ventas)) AS DECIMAL(18, 2)) AS VARCHAR) AS promedio_ventas
+FROM ALBONDIGA.BI_Hechos_Ticket HT
+JOIN ALBONDIGA.BI_Dimension_Tiempo T ON HT.id_tiempo = T.id_tiempo
+JOIN ALBONDIGA.BI_Dimension_Localidad L ON HT.id_localidad = L.id_localidad
+GROUP BY L.localidad, T.año, T.mes
 GO
 
 -- 2.Cantidad unidades promedio. Cantidad promedio de artículos que se venden en función de los tickets según el turno para cada cuatrimestre de cada año. Se obtiene sumando la cantidad de 
 -- artículos de todos los tickets correspondientes sobre la cantidad de tickets. Si un producto tiene más de una unidad en un ticket, para el indicador se consideran todas las unidades.
 CREATE VIEW ALBONDIGA.V_CantidadUnidadesPromedio AS
 SELECT T.año,
-       T.cuatrimestre,
-       TU.descripcion_turno,
-	   SUM(PXT.cantidad) / COUNT(DISTINCT TK.id_ticket) AS PromedioUnidades
-FROM ALBONDIGA.BI_Hechos_Ticket TK
-JOIN ALBONDIGA.BI_Producto_x_Ticket PXT on PXT.id_ticket = TK.id_ticket
-JOIN ALBONDIGA.BI_Dimension_Tiempo T ON TK.id_tiempo = T.id_tiempo
-JOIN ALBONDIGA.BI_Dimension_Turnos TU ON TU.id_turno = TK.id_turno
+		T.cuatrimestre,
+		TU.descripcion_turno,
+		SUM(HT.cantidad_productos) / SUM(HT.cantidad_ventas) AS cantidad_unidades_promedio
+FROM ALBONDIGA.BI_Hechos_Ticket HT
+JOIN ALBONDIGA.BI_Dimension_Tiempo T ON HT.id_tiempo = T.id_tiempo
+JOIN ALBONDIGA.BI_Dimension_Turnos TU ON HT.id_turno = TU.id_turno
 GROUP BY T.año, T.cuatrimestre, TU.descripcion_turno
 GO
 
 -- 3.Porcentaje anual de ventas registradas por rango etario del empleado según el tipo de caja para cada cuatrimestre. 
 -- Se calcula tomando la cantidad de ventas correspondientes sobre el total de ventas anual.
 CREATE VIEW ALBONDIGA.V_VentasRangoEtarioAnual AS
-SELECT TI.cuatrimestre,
-       R.descripcion_rango,
-       T.tipo_caja, 
-       CAST(CAST((COUNT(T.id_ticket) * 100.0 / (SELECT COUNT(TK.id_ticket)
-                                                FROM ALBONDIGA.BI_Hechos_Ticket TK
-                                                JOIN ALBONDIGA.BI_Dimension_Tiempo TP ON TK.id_tiempo = TP.id_tiempo
-                                                WHERE TP.año = TI.año)) AS INT) AS VARCHAR) + '%' AS PorcentajeVentas
-FROM ALBONDIGA.BI_Hechos_Ticket T
-JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON TI.id_tiempo = T.id_tiempo
-JOIN ALBONDIGA.BI_Dimension_Rango_Etario R ON R.id_rango_etario = T.id_rango_etario_empleado
-GROUP BY TI.cuatrimestre, R.descripcion_rango, TI.año, T.tipo_caja
+SELECT T.año,
+		T.cuatrimestre,
+		R.descripcion_rango,
+		TC.tipo_caja,
+		'%' + CAST(CAST(SUM(HT.cantidad_ventas) * 100.0 / (SELECT SUM(cantidad_ventas)
+															FROM ALBONDIGA.BI_Hechos_Ticket TK
+															JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON TI.id_tiempo = TK.id_tiempo
+															WHERE TI.año = T.año) AS DECIMAL(5, 2)) AS VARCHAR) AS porcentaje_ventas
+FROM ALBONDIGA.BI_Hechos_Ticket HT
+JOIN ALBONDIGA.BI_Dimension_Tiempo T ON HT.id_tiempo = T.id_tiempo
+JOIN ALBONDIGA.BI_Dimension_Rango_Etario R ON HT.id_rango_etario_empleado = R.id_rango_etario
+JOIN ALBONDIGA.BI_Dimension_Tipo_Caja TC ON HT.id_tipo_caja = TC.id_tipo_caja
+GROUP BY T.año, T.cuatrimestre, R.descripcion_rango, TC.tipo_caja
 GO
 
 -- 4.Cantidad de ventas registradas por turno para cada localidad según el mes de cada año.
@@ -709,9 +711,9 @@ SELECT TI.año,
 		TI.mes,
 		TU.descripcion_turno,
 		L.localidad,
-		ISNULL(COUNT(T.id_ticket), 0) Ventas
-FROM ALBONDIGA.BI_Dimension_Localidad L
-JOIN ALBONDIGA.BI_Hechos_Ticket T ON T.id_localidad = L.id_localidad
+		SUM(T.cantidad_ventas) ventas
+FROM ALBONDIGA.BI_Hechos_Ticket T
+JOIN ALBONDIGA.BI_Dimension_Localidad L ON T.id_localidad = L.id_localidad
 JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON TI.id_tiempo = T.id_tiempo
 JOIN ALBONDIGA.BI_Dimension_Turnos TU ON TU.id_turno = T.id_turno
 GROUP BY TI.año, TI.mes, TU.descripcion_turno, L.localidad
@@ -722,13 +724,13 @@ CREATE VIEW ALBONDIGA.V_PorcentajeDescuentoMensual AS
 SELECT T.año,
 		T.mes,
 		CAST(CAST((SUM(TI.total_descuento_medio_pago + TI.total_promociones) / ISNULL(SUM(TI.total_venta), 1) * 100) AS INT) AS VARCHAR) + '%' AS porcentaje_descuento
-FROM ALBONDIGA.BI_Dimension_Tiempo AS T
-JOIN ALBONDIGA.BI_Hechos_Ticket AS TI ON T.id_tiempo = TI.id_tiempo
-GROUP BY T.año, T.mes;
+FROM ALBONDIGA.BI_Hechos_Ticket TI
+JOIN ALBONDIGA.BI_Dimension_Tiempo T ON T.id_tiempo = TI.id_tiempo 
+GROUP BY T.año, T.mes
 GO
 
 -- 6.Las tres categorías de productos con mayor descuento aplicado a partir de promociones para cada cuatrimestre de cada año.
-CREATE VIEW ALBONDIGA.V_Top3CategoriasDescuento AS
+/*CREATE VIEW ALBONDIGA.V_Top3CategoriasDescuento AS
 WITH DescuentosPorCategoria AS (
     SELECT C.descripcion_categoria,
            TI.año,
@@ -836,6 +838,7 @@ GO
 */
 /* --------------------------------------------- Ejecución de la migración --------------------------------------------- */
 EXEC ALBONDIGA.migrar_BI_Dimension_Sucursal
+EXEC ALBONDIGA.migrar_BI_Dimension_Tipo_Caja
 EXEC ALBONDIGA.migrar_BI_Dimension_Provincia
 EXEC ALBONDIGA.migrar_BI_Dimension_Localidad
 EXEC ALBONDIGA.migrar_BI_Dimension_Medio_Pago
@@ -846,9 +849,9 @@ EXEC ALBONDIGA.migrar_BI_Dimension_Turnos
 EXEC ALBONDIGA.migrar_BI_Dimension_Subcategoria
 EXEC ALBONDIGA.migrar_BI_Dimension_Categoria_x_Subcategoria
 EXEC ALBONDIGA.migrar_BI_Hechos_Ticket
-EXEC ALBONDIGA.migrar_BI_Hechos_Envio
-EXEC ALBONDIGA.migrar_BI_Hechos_Pago
-EXEC ALBONDIGA.migrar_BI_Hechos_Promociones
+--EXEC ALBONDIGA.migrar_BI_Hechos_Envio
+--EXEC ALBONDIGA.migrar_BI_Hechos_Pago
+--EXEC ALBONDIGA.migrar_BI_Hechos_Promociones
 
 /* --------------------------------------------- Vistas --------------------------------------------- */
 /*SELECT * FROM ALBONDIGA.V_TicketPromedioMensual;
