@@ -183,7 +183,7 @@ BEGIN
     ELSE IF (@edad >= 25 AND @edad < 35) BEGIN SET @rango = '25 - 35'; END
     ELSE IF (@edad >= 35 AND @edad < 50) BEGIN SET @rango = '35 - 50'; END
     ELSE IF (@edad >= 50) BEGIN SET @rango = '> 50'; END
-	-- ELSE BEGIN SET @rango = 'Desconocido'; END
+	ELSE BEGIN SET @rango = 'Desconocido'; END
     RETURN @rango;
 END
 GO
@@ -204,7 +204,7 @@ BEGIN
     IF (@hora >= 8 AND @hora < 12) BEGIN SET @rango = '08:00 - 12:00'; END
     ELSE IF (@hora >= 12 AND @hora < 16) BEGIN SET @rango = '12:00 - 16:00'; END
     ELSE IF (@hora >= 16 AND @hora < 20) BEGIN SET @rango = '16:00 - 20:00'; END
-	-- ELSE BEGIN SET @rango = 'Fuera de rango'; END
+	ELSE BEGIN SET @rango = 'Fuera de rango'; END
     RETURN @rango;
 END
 GO
@@ -276,16 +276,6 @@ CREATE TABLE ALBONDIGA.BI_Dimension_Categoria (
     descripcion_categoria NVARCHAR(100)
 );
 
-CREATE TABLE ALBONDIGA.BI_Dimension_SubCategoria (
-    id_subcategoria INT PRIMARY KEY,
-    descripcion_subcategoria NVARCHAR(100)
-);
-
-CREATE TABLE ALBONDIGA.BI_Dimension_Categoria_x_Subcategoria (
-    id_categoria INT,
-	id_subcategoria INT
-);
-
 CREATE TABLE ALBONDIGA.BI_Hechos_Ticket (
     id_tiempo INT,
     id_localidad INT,
@@ -316,7 +306,7 @@ CREATE TABLE ALBONDIGA.BI_Hechos_Pago (
 	id_rango_etario_cliente INT,
 	id_sucursal INT,
     total_importe_cuotas DECIMAL(18, 2),
-	cantidad_pagos DECIMAL(18, 0),
+	cuotas DECIMAL(18, 0),
 	total_descuento_medio_pago DECIMAL(18, 2)
 );
 
@@ -353,15 +343,6 @@ FOREIGN KEY (id_rango_etario_empleado) REFERENCES ALBONDIGA.BI_Dimension_Rango_E
 ALTER TABLE ALBONDIGA.BI_Hechos_Ticket
 ADD CONSTRAINT FK_BI_Hechos_Ticket_Turno
 FOREIGN KEY (id_turno) REFERENCES ALBONDIGA.BI_Dimension_Turnos(id_turno);
-
--- Foreign keys para BI_Dimension_Categoria_x_Subcategoria
-ALTER TABLE ALBONDIGA.BI_Dimension_Categoria_x_Subcategoria
-ADD CONSTRAINT FK_BI_Dimension_Categoria_Categoria_x_Subcategoria
-FOREIGN KEY (id_categoria) REFERENCES ALBONDIGA.BI_Dimension_Categoria(id_categoria);
-
-ALTER TABLE ALBONDIGA.BI_Dimension_Categoria_x_Subcategoria
-ADD CONSTRAINT FK_BI_Dimension_Subcategoria_Categoria_x_Subcategoria
-FOREIGN KEY (id_subcategoria) REFERENCES ALBONDIGA.BI_Dimension_Subcategoria(id_subcategoria);
 
 -- Foreign keys para BI_Hechos_Envio
 ALTER TABLE ALBONDIGA.BI_Hechos_Envio
@@ -447,7 +428,7 @@ AS
 BEGIN
     PRINT 'Migrando datos a la dimensión Rango Etario...'
     INSERT INTO BI_Dimension_Rango_Etario (descripcion_rango)
-    VALUES ('< 25'), ('25 - 35'), ('35 - 50'), ('> 50')
+    VALUES ('< 25'), ('25 - 35'), ('35 - 50'), ('> 50'), ('Desconocido')
 END
 GO
 
@@ -456,7 +437,7 @@ AS
 BEGIN
     PRINT 'Migrando datos a la dimensión Turnos...'
     INSERT INTO BI_Dimension_Turnos (descripcion_turno)
-    VALUES ('08:00 - 12:00'), ('12:00 - 16:00'), ('16:00 - 20:00')
+    VALUES ('08:00 - 12:00'), ('12:00 - 16:00'), ('16:00 - 20:00'), ('Fuera de rango')
 END
 GO
 
@@ -487,26 +468,6 @@ BEGIN
     INSERT INTO BI_Dimension_Tipo_Caja (id_tipo_caja, tipo_caja)
     SELECT DISTINCT id_tipo_caja, tipo_caja
     FROM ALBONDIGA.Tipo_Caja
-END
-GO
-
-CREATE PROCEDURE ALBONDIGA.migrar_BI_Dimension_Subcategoria
-AS
-BEGIN
-    PRINT 'Migrando datos a la dimensión SubCategoria...'
-    INSERT INTO BI_Dimension_Subcategoria (id_subcategoria, descripcion_subcategoria)
-    SELECT DISTINCT id_subcategoria, nombre
-    FROM ALBONDIGA.Sub_Categoria
-END
-GO
-
-CREATE PROCEDURE ALBONDIGA.migrar_BI_Dimension_Categoria_x_Subcategoria
-AS
-BEGIN
-    PRINT 'Migrando datos a la dimensión Categoria x SubCategoria...'
-    INSERT INTO BI_Dimension_Categoria_x_Subcategoria (id_categoria, id_subcategoria)
-    SELECT DISTINCT id_categoria, id_subcategoria
-    FROM ALBONDIGA.Categoria_x_Subcategoria
 END
 GO
 
@@ -589,8 +550,18 @@ BEGIN
 			TU.id_turno,
 			TC.id_tipo_caja,
 			SUM(T.total_promociones),
-			SUM(PX.cantidad),
-			COUNT(DISTINCT T.id_ticket),
+			(SELECT SUM(PX.cantidad) FROM ALBONDIGA.Producto_x_Ticket PX 
+			JOIN ALBONDIGA.Ticket T1 ON T1.id_ticket = PX.id_ticket
+			JOIN ALBONDIGA.Sucursal S1 ON S1.nro_de_sucursal = T1.id_sucursal
+			JOIN ALBONDIGA.Domicilio D1 ON S1.id_direccion = D1.id_domicilio
+			JOIN ALBONDIGA.Empleado E1 ON T1.id_empleado = E1.legajo
+			JOIN ALBONDIGA.BI_Dimension_Rango_Etario R1 ON R1.descripcion_rango = ALBONDIGA.rangoEtario(ALBONDIGA.edadActual(E1.fecha_de_nacimiento))
+			JOIN ALBONDIGA.BI_Dimension_Turnos TU1 ON TU1.descripcion_turno = ALBONDIGA.rangoHorario(ALBONDIGA.obtenerHora(T1.fecha_y_hora))
+			JOIN ALBONDIGA.BI_Dimension_Tiempo TI1 ON TI1.año = YEAR(T1.fecha_y_hora) AND TI1.cuatrimestre = ALBONDIGA.obtenerCuatrimestre(T1.fecha_y_hora) AND TI1.mes = MONTH(T1.fecha_y_hora)
+			JOIN ALBONDIGA.Caja C1 ON C1.id_caja = T1.id_caja
+			JOIN ALBONDIGA.BI_Dimension_Tipo_Caja TC1 ON TC1.id_tipo_caja = C1.id_tipo_caja
+			WHERE TI.id_tiempo = TI1.id_tiempo AND D.id_localidad = D1.id_localidad AND R.id_rango_etario = R1.id_rango_etario AND TU.id_turno = TU1.id_turno AND TC.id_tipo_caja = TC1.id_tipo_caja),
+			COUNT(T.id_ticket),
 			SUM(T.total_descuento_medio_pago),
 			SUM(T.total_venta)
     FROM ALBONDIGA.Ticket T
@@ -602,7 +573,6 @@ BEGIN
     JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON TI.año = YEAR(T.fecha_y_hora) AND TI.cuatrimestre = ALBONDIGA.obtenerCuatrimestre(T.fecha_y_hora) AND TI.mes = MONTH(T.fecha_y_hora)
     JOIN ALBONDIGA.Caja C ON C.id_caja = T.id_caja
     JOIN ALBONDIGA.BI_Dimension_Tipo_Caja TC ON TC.id_tipo_caja = C.id_tipo_caja
-    JOIN ALBONDIGA.producto_x_ticket PX ON T.id_ticket = PX.id_ticket
 	GROUP BY TI.id_tiempo, D.id_localidad, R.id_rango_etario, TU.id_turno, TC.id_tipo_caja
 END
 GO
@@ -611,41 +581,43 @@ CREATE PROCEDURE ALBONDIGA.migrar_BI_Hechos_Envio
 AS
 BEGIN
     PRINT 'Migrando datos a la tabla de hechos Envio...'
-    INSERT INTO BI_Hechos_Envio (id_rango_etario_cliente, id_sucursal, id_tiempo, cantidad_envios, costo_envio, cantidad_envios_en_horarios, id_localidad_cliente)
+    INSERT INTO BI_Hechos_Envio (id_rango_etario_cliente, id_sucursal, id_tiempo, id_localidad_cliente, cantidad_envios, costo_envio, cantidad_envios_en_horarios)
     SELECT R.id_rango_etario, 
-			T.id_sucursal, 
+			S.id_sucursal, 
 			TI.id_tiempo, 
-			COUNT(*),
-			SUM(E.costo) AS costo_envio, 
-			SUM(CASE WHEN E.fecha_programada = CAST(E.fecha_y_hora_entrega AS DATE) AND DATEPART(HOUR, E.fecha_y_hora_entrega) BETWEEN E.hora_inicio AND E.hora_fin 
+			L.id_localidad,
+			COUNT(E.nro_envio),
+			SUM(E.costo), 
+			SUM(CASE WHEN E.fecha_programada = CAST(E.fecha_y_hora_entrega AS DATE) AND DATEPART(HOUR, E.fecha_y_hora_entrega) BETWEEN E.hora_inicio AND E.hora_fin
                 THEN 1 
-                ELSE 0 END),
-        D.id_localidad
+                ELSE 0 END)
     FROM ALBONDIGA.Envio E
     JOIN ALBONDIGA.Ticket T ON T.id_ticket = E.id_ticket
     JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON TI.año = YEAR(E.fecha_programada) AND TI.cuatrimestre = ALBONDIGA.obtenerCuatrimestre(E.fecha_programada) AND TI.mes = MONTH(E.fecha_programada)
     JOIN ALBONDIGA.Cliente C ON C.id_cliente = E.id_cliente
     JOIN ALBONDIGA.BI_Dimension_Rango_Etario R ON R.descripcion_rango = ALBONDIGA.rangoEtario(ALBONDIGA.edadActual(C.fecha_nacimiento))
     JOIN ALBONDIGA.Domicilio D ON D.id_domicilio = C.id_domicilio
-    GROUP BY R.id_rango_etario, T.id_sucursal, TI.id_tiempo, D.id_localidad
+	JOIN ALBONDIGA.BI_Dimension_Localidad L ON L.id_localidad = D.id_localidad
+	JOIN ALBONDIGA.BI_Dimension_Provincia P ON L.id_provincia = P.id_provincia
+	JOIN ALBONDIGA.BI_Dimension_Sucursal S ON S.id_sucursal = T.id_sucursal
+    GROUP BY R.id_rango_etario, S.id_sucursal, TI.id_tiempo, L.id_localidad
 END
 GO
 
-/*
 CREATE PROCEDURE ALBONDIGA.migrar_BI_Hechos_Pago
 AS
 BEGIN
     PRINT 'Migrando datos a la tabla de hechos Pago...'
-    INSERT INTO BI_Hechos_Pago (id_medio_pago, id_tiempo, id_rango_etario_cliente, cantidad_pagos, total_importe_cuotas, total_descuento_medio_pago)
-    SELECT DISTINCT MP.id_medio_pago,
-					TI.id_tiempo,
-					R.id_rango_etario,
-					S.id_sucursal,
-					COUNT(P.nro_pago),
-					SUM(CASE WHEN DP.cuotas IS NOT NULL THEN P.importe ELSE 0 END),
-					SUM(DMP.total_descuento_aplicado)
+    INSERT INTO BI_Hechos_Pago (id_medio_pago, id_tiempo, id_rango_etario_cliente, id_sucursal, total_importe_cuotas, cuotas, total_descuento_medio_pago)
+	SELECT P.id_medio_pago, 
+			TI.id_tiempo, 
+			R.id_rango_etario,
+			S.id_sucursal,
+			SUM(ISNULL(P.importe, 0)) sumatoria_importe,
+			ISNULL(DP.cuotas, 0) cuotas, 
+			SUM(ISNULL(DMP.total_descuento_aplicado, 0)) sumatoria_descuentos
     FROM ALBONDIGA.Pago P
-	LEFT JOIN ALBONDIGA.Detalle_Pago DP ON DP.id_detalle_pago = P.id_detalle_pago
+    LEFT JOIN ALBONDIGA.Detalle_Pago DP ON DP.id_detalle_pago = P.id_detalle_pago
     LEFT JOIN ALBONDIGA.Descuento_Por_Medio_Pago DMP ON P.id_descuento_medio_pago = DMP.id_descuento_medio_pago
     JOIN ALBONDIGA.BI_Dimension_Medio_Pago MP ON P.id_medio_pago = MP.id_medio_pago
     JOIN ALBONDIGA.Ticket T ON T.id_ticket = P.id_ticket
@@ -654,31 +626,7 @@ BEGIN
     JOIN ALBONDIGA.BI_Dimension_Rango_Etario R ON R.descripcion_rango = ALBONDIGA.rangoEtario(ALBONDIGA.edadActual(C.fecha_nacimiento))
     JOIN ALBONDIGA.BI_Dimension_Sucursal S ON T.id_sucursal = S.id_sucursal
     JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON TI.año = YEAR(P.fecha_y_hora) AND TI.cuatrimestre = ALBONDIGA.obtenerCuatrimestre(P.fecha_y_hora) AND TI.mes = MONTH(P.fecha_y_hora)
-    GROUP BY MP.id_medio_pago, TI.id_tiempo, R.id_rango_etario, S.id_sucursal, ISNULL(DP.cuotas, 0)
-END
-GO*/
-CREATE PROCEDURE ALBONDIGA.migrar_BI_Hechos_Pago
-AS
-BEGIN
-    PRINT 'Migrando datos a la tabla de hechos Pago...'
-    INSERT INTO BI_Hechos_Pago (id_medio_pago, id_tiempo, id_rango_etario_cliente, id_sucursal, cantidad_pagos, total_importe_cuotas, total_descuento_medio_pago)
-	SELECT DISTINCT P.id_medio_pago, 
-					TI.id_tiempo, 
-					R.id_rango_etario,
-					T.id_sucursal,
-					COUNT(P.nro_pago), -- falta algun campo que contemple lo de la vista 11
-					SUM(ISNULL(P.importe, 0)), -- no se si esto esta bien
-					--ISNULL(DP.cuotas, 0),
-					SUM(ISNULL(DMP.total_descuento_aplicado, 0)) -- no se si esto esta bien
-    FROM ALBONDIGA.Pago P
-    LEFT JOIN ALBONDIGA.Detalle_Pago DP ON DP.id_detalle_pago = P.id_detalle_pago
-	LEFT JOIN ALBONDIGA.Descuento_Por_Medio_Pago DMP ON DMP.id_descuento_medio_pago = P.id_descuento_medio_pago
-    JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON TI.año = YEAR(P.fecha_y_hora) AND TI.cuatrimestre = ALBONDIGA.obtenerCuatrimestre(P.fecha_y_hora) AND TI.mes = MONTH(P.fecha_y_hora)
-    JOIN ALBONDIGA.Ticket T ON T.id_ticket = P.id_ticket
-    LEFT JOIN ALBONDIGA.Envio E ON E.id_ticket = T.id_ticket
-    LEFT JOIN ALBONDIGA.Cliente C ON C.id_cliente = E.id_cliente
-    JOIN ALBONDIGA.BI_Dimension_Rango_Etario R ON R.descripcion_rango = ALBONDIGA.rangoEtario(ALBONDIGA.edadActual(C.fecha_nacimiento))
-	GROUP BY P.id_medio_pago, TI.id_tiempo, R.id_rango_etario, T.id_sucursal
+    GROUP BY TI.id_tiempo, R.id_rango_etario, S.id_sucursal, ISNULL(DP.cuotas, 0), P.id_medio_pago
 END
 GO
 
@@ -689,14 +637,14 @@ BEGIN
     INSERT INTO BI_Hechos_Promociones (id_categoria, id_tiempo, total_descuento_promo)
     SELECT C.id_categoria,
 			TI.id_tiempo,
-			SUM(DMP.total_descuento_aplicado)
+			SUM(PXP.promo_aplicada_descuento)
     FROM ALBONDIGA.Pago P
     JOIN ALBONDIGA.Detalle_Pago DP ON P.id_detalle_pago = DP.id_detalle_pago
     JOIN ALBONDIGA.Producto_X_Ticket PXTI ON P.id_ticket = PXTI.id_ticket
     JOIN ALBONDIGA.Producto PR ON PXTI.id_producto = PR.codigo
 	JOIN ALBONDIGA.Categoria_x_Subcategoria CXS ON CXS.id_subcategoria = PR.id_subcategoria
     JOIN ALBONDIGA.Categoria C ON CXS.id_categoria = C.id_categoria
-	JOIN ALBONDIGA.Descuento_Por_Medio_Pago DMP ON P.id_descuento_medio_pago = DMP.id_descuento_medio_pago
+	JOIN ALBONDIGA.Promocion_x_Producto PXP ON PXP.id_producto = PR.codigo
     JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON YEAR(P.fecha_y_hora) = TI.año AND TI.cuatrimestre = ALBONDIGA.obtenerCuatrimestre(P.fecha_y_hora) AND TI.mes = MONTH(P.fecha_y_hora)
     GROUP BY C.id_categoria, TI.id_tiempo
 END
@@ -722,7 +670,7 @@ CREATE VIEW ALBONDIGA.V_CantidadUnidadesPromedio AS
 SELECT T.año,
 		T.cuatrimestre,
 		TU.descripcion_turno,
-		SUM(HT.cantidad_productos) / SUM(HT.cantidad_ventas) AS cantidad_unidades_promedio
+		CAST(SUM(HT.cantidad_productos) / SUM(HT.cantidad_ventas) AS DECIMAL(18, 0)) AS cantidad_unidades_promedio
 FROM ALBONDIGA.BI_Hechos_Ticket HT
 JOIN ALBONDIGA.BI_Dimension_Tiempo T ON HT.id_tiempo = T.id_tiempo
 JOIN ALBONDIGA.BI_Dimension_Turnos TU ON HT.id_turno = TU.id_turno
@@ -830,6 +778,7 @@ SELECT TOP 5 L.localidad,
 			SUM(E.costo_envio) AS total_costo_envio
 FROM ALBONDIGA.BI_Hechos_Envio E
 JOIN ALBONDIGA.BI_Dimension_Localidad L ON E.id_localidad_cliente = L.id_localidad
+JOIN ALBONDIGA.BI_Dimension_Provincia P ON P.id_provincia = L.id_provincia
 GROUP BY L.localidad
 ORDER BY 2 DESC
 GO
@@ -841,38 +790,38 @@ SELECT TOP 3 S.nombre,
 			MP.descripcion_medio_pago,
 			TI.mes,
 			TI.año,
-			SUM(HP.total_importe_cuotas) AS total_importe_cuotas
+			'$' + CAST(SUM(HP.total_importe_cuotas) AS VARCHAR) AS total_importe_cuotas
 FROM ALBONDIGA.BI_Hechos_Pago HP
 JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON TI.id_tiempo = HP.id_tiempo
 JOIN ALBONDIGA.BI_Dimension_Sucursal S ON S.id_sucursal = HP.id_sucursal
 JOIN ALBONDIGA.BI_Dimension_Medio_Pago MP ON MP.id_medio_pago = HP.id_medio_pago
-WHERE HP.total_importe_cuotas <> 0
+WHERE HP.total_importe_cuotas > 0
 GROUP BY S.nombre, MP.descripcion_medio_pago, TI.mes, TI.año
 ORDER BY total_importe_cuotas DESC;
 GO
-/*
+
 -- 11.Promedio de importe de la cuota en función del rango etareo del cliente.
 CREATE VIEW ALBONDIGA.V_PromedioCuotaRangoEtario AS
-SELECT R.descripcion_rango,
-		'$' + CAST(CAST(AVG(P.importe/P.total_importe_cuotas) AS DECIMAL(18,2)) AS VARCHAR) AS PromedioImporteCuota
+SELECT R.descripcion_rango AS rango_etario,
+      '$' + CAST(CAST(AVG(P.total_importe_cuotas / P.cuotas) AS DECIMAL(18, 2)) AS VARCHAR) AS promedio_importe_cuota
 FROM ALBONDIGA.BI_Hechos_Pago P
 JOIN ALBONDIGA.BI_Dimension_Rango_Etario R ON P.id_rango_etario_cliente = R.id_rango_etario
-WHERE P.cuotas <> 0
-GROUP BY R.descripcion_rango;
+WHERE P.cuotas > 0
+GROUP BY R.descripcion_rango
 GO
 
 -- 12.Porcentaje de descuento aplicado por cada medio de pago en función del valor de total de pagos sin el descuento, por cuatrimestre. Es decir, total de descuentos 
 -- sobre el total de pagos más el total de descuentos.
 CREATE VIEW ALBONDIGA.V_PorcentajeDescuentoMedioPago AS
 SELECT MP.descripcion_medio_pago,
-		TI.año,
 		TI.cuatrimestre,
-		CAST(CEILING(SUM(P.total_descuento_medio_pago) / SUM(P.importe + P.total_descuento_medio_pago) * 100) AS VARCHAR) + '%' AS PorcentajeDescuento
-FROM ALBONDIGA.BI_Hechos_Pago P
-JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON P.id_tiempo = TI.id_tiempo
+		TI.año,
+		'%' + CAST(CAST((SUM(P.total_descuento_medio_pago) * 100.0) / SUM(P.total_importe_cuotas + P.total_descuento_medio_pago) AS DECIMAL(18, 2)) AS VARCHAR) AS porcentaje_descuento
+FROM  ALBONDIGA.BI_Hechos_Pago P
 JOIN ALBONDIGA.BI_Dimension_Medio_Pago MP ON P.id_medio_pago = MP.id_medio_pago
-GROUP BY MP.descripcion_medio_pago, TI.año, TI.cuatrimestre;
-GO*/
+JOIN ALBONDIGA.BI_Dimension_Tiempo TI ON P.id_tiempo = TI.id_tiempo
+GROUP BY MP.descripcion_medio_pago, TI.cuatrimestre, TI.año
+GO
 
 /* --------------------------------------------- Ejecución de la migración --------------------------------------------- */
 EXEC ALBONDIGA.migrar_BI_Dimension_Sucursal
@@ -884,8 +833,6 @@ EXEC ALBONDIGA.migrar_BI_Dimension_Rango_Etario
 EXEC ALBONDIGA.migrar_BI_Dimension_Tiempo
 EXEC ALBONDIGA.migrar_BI_Dimension_Categoria
 EXEC ALBONDIGA.migrar_BI_Dimension_Turnos
-EXEC ALBONDIGA.migrar_BI_Dimension_Subcategoria
-EXEC ALBONDIGA.migrar_BI_Dimension_Categoria_x_Subcategoria
 EXEC ALBONDIGA.migrar_BI_Hechos_Ticket
 EXEC ALBONDIGA.migrar_BI_Hechos_Envio
 EXEC ALBONDIGA.migrar_BI_Hechos_Pago
