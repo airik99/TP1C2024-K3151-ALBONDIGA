@@ -652,7 +652,7 @@ GO
 
 /* --------------------------------------------- Creacion de vistas --------------------------------------------- */
 
---1.Ticket Promedio mensual. Valor promedio de las ventas (en $) según la localidad, año y mes. Se calcula en función de la sumatoria del importe de las ventas sobre el total de las mismas.
+-- 1.Ticket Promedio mensual. Valor promedio de las ventas (en $) según la localidad, año y mes. Se calcula en función de la sumatoria del importe de las ventas sobre el total de las mismas.
 CREATE VIEW ALBONDIGA.V_TicketPromedioMensual AS
 SELECT L.localidad,
 		T.año,
