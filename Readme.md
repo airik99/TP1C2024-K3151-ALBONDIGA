@@ -3,7 +3,12 @@ Nota: Aprobado
 
 ● Curso: K3151
 ● Número de grupo: 11
-● Nombre y legajo de todos los integrantes:
+
+| Nombre del Integrante | Usuario de GitHub       |
+|-----------------------|-------------------------|
+| Azula Facundo         | [sirhox](https://github.com/sirhox) |
+| Aveni Juan Pablo      | [JPAveni](https://github.com/JPAveni) |
+| Garcia Federico Camila| [airik99](https://github.com/airik99) |
   - Azula Facundo 
 	* Legajo: 167.975-2
 	* Curso: K3151
@@ -13,4 +18,3 @@ Nota: Aprobado
   - Garcia Federico Camila
 	* Legajo: 168.258-1
 	* Curso: K3151
-● Email del integrante responsable del grupo: camilaabigailgf@gmail.com
