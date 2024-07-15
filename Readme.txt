@@ -1,3 +1,6 @@
+# Trabajo Práctico de Gestión de Datos - UTN FRBA
+Nota: Aprobado
+
 ● Curso: K3151
 ● Número de grupo: 11
 ● Nombre y legajo de todos los integrantes:
